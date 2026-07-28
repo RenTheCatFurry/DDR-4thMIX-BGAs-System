@@ -9,10 +9,7 @@ Let's enjoy!
 
 
 ## Changelog
-v1.1
-- Added **explode** effects (dynamic)
-- Added **bgcrop** effect (static)
-- Added **bgwarp** effects (dynamic)
-- Added **boss** BGA set
-- Added song background only BGAnimations (**comm** BGA set)
-- Now the sprites fit into the center of the screen at any aspect ratio when there's no effect and with scroll effects (this can be disabled by changing the variable **adjust_tile_to_center** in **layer.lua** to **false**)
+v1.2
+- Added **toys** set
+- Modified some BGAs
+- Fixed a bug in Stepmania 5 where the game did not recognize the texture path
