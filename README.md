@@ -3,11 +3,6 @@ This is a recreation of the songs BGAnimations engine from DDR 4thMIX for Stepma
 <br> Do you want to create your own BGAnimations? Check the wiki!
 
 
-## How to install
-Drag all the content of the Zip file to your BGAnimations folder.
-Let's enjoy!
-
-
 ## Changelog
 v1.2
 - Added **toys** set
