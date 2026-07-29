@@ -4,7 +4,8 @@ This is a recreation of the songs BGAnimations engine from DDR 4thMIX for Stepma
 
 
 ## Changelog
-v1.2
+v1.2.1
 - Added **toys** set
 - Modified some BGAs
 - Fixed a bug in Stepmania 5 where the game did not recognize the texture path
+- Added **effectoffset** parameter (only works with snail effects)
