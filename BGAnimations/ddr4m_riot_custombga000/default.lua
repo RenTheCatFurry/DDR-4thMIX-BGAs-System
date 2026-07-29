@@ -1,0 +1,36 @@
+local layer1 = {
+    textures = {
+        {
+            img = "riot/cda_riot 1x2 (stretch).png",
+            size = {320,120},
+            delay = 0.5,
+            properties = {
+                "framesbeat"
+            }
+        }
+    },
+    scroll = {1,2}
+}
+
+local layer2 = {
+    textures = {
+        {
+            img = "riot/h97_riot 4x4 (stretch).png",
+            size = {80,60},
+            frames = {14,15},
+            delay = 1/8,
+            properties = {
+                "framesbeat",
+                "framesseq"
+            }
+        }
+    },
+    effect = "dvdbounce",
+    effectstep = 0.25,
+    effectlength = 16
+}
+
+return Def.ActorFrame{
+    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
+    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2)
+}
