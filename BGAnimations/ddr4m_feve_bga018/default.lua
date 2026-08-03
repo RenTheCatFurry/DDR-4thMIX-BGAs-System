@@ -5,10 +5,11 @@ local layer1 = {
             properties = {
                 "noframes"
             }
-        },
+        }
     },
     alpha = 2/3,
-    fadelength = 8,
+    fadelength = 4,
+    fadeoffset = -1,
     properties = {
         "fadeout"
     }
