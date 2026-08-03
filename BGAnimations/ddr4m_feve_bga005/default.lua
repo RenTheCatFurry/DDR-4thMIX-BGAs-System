@@ -48,7 +48,7 @@ return Def.ActorFrame{
         self:SetUpdateFunction(function(self)
             local beat = GAMESTATE:GetSongPosition():GetSongBeat()
             beat = beat - start_beat
-            MESSAAGEMAN:Broadcast("Beat", {beat = beat})
+            MESSAGEMAN:Broadcast("Beat", {beat = beat})
         end)
     end,
 
