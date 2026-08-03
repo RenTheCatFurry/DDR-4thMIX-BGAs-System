@@ -933,11 +933,11 @@ local layer = Def.ActorFrame{
                 if fade_linear then
                     local time = (beat + fade_offset) / fade_length
                     if not fade_stop then time = (time * 2) % 2 end
-                    if not fade_out then time = 1 - time end
+                    if fade_out then time = 1 - time end
 
                     local beat_linear = time
                     
-                    if not fade_out then
+                    if fade_out then
                         if beat_linear > 0 then beat_linear = 0 end
                         beat_linear = 1 - math.abs(beat_linear)
                     else
