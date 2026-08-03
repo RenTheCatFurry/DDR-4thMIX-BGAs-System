@@ -35,7 +35,7 @@ local ADJUST_TO_SCREEN_HEIGHT = SCREEN_HEIGHT / DDR_SCREEN_HEIGHT
 local blink_alpha = p.blinkalpha
 local fade_length = p.fadelength
 local fade_alpha = p.fadealpha or 0
-local fade_offset = p.fadeoffset
+local fade_offset = p.fadeoffset or 0
 local fade_linear = has_property("fadelinear")
 local fade_rgb = has_property("fadergb")
 local fade_out = has_property("fadeout")
@@ -931,25 +931,17 @@ local layer = Def.ActorFrame{
             if fade_length then
                 -- animation fade linear
                 if fade_linear then
-                    local time = beat / fade_length
+                    local time = (beat + fade_offset) / fade_length
                     if not fade_stop then time = (time * 2) % 2 end
-                    if fade_out then time = 1 - time end
+                    if not fade_out then time = 1 - time end
 
                     local beat_linear = time
-                    if fade_out then
-                        if beat_linear < 0 then beat_linear = 0 end
+                    
+                    if not fade_out then
+                        if beat_linear > 0 then beat_linear = 0 end
+                        beat_linear = 1 - math.abs(beat_linear)
                     else
                         if beat_linear > 1 then beat_linear = 1 end
-                    end
-
-                    if invert then
-                        if scroll_bg_crop then
-                            beat_linear = (2 / 3) + beat_linear / 3
-                        else
-                            beat_linear = 0.5 + beat_linear / 2
-                        end
-
-                        if time < 0 then beat_linear = 0 end
                     end
 
                     -- apply fade
@@ -969,19 +961,6 @@ local layer = Def.ActorFrame{
                     local beat_angle = start_angle + (beat / fade_length) * 360 % 360
                     local beat_sin = (1 + math.sin(math.rad(beat_angle))) / 2
                     local opacity_value = fade_alpha + beat_sin * (1 - fade_alpha)
-
-                    if invert then
-                        if scroll_bg_crop then
-                            opacity_value = (2 / 3) + opacity_value / 3
-                        else
-                            opacity_value = 0.5 + opacity_value / 2
-                        end
-
-                    else
-                        if scroll_bg_crop then
-                            opacity_value = 0.5 + opacity_value / 2
-                        end
-                    end
 
                     -- apply fade
                     if fade_rgb then
