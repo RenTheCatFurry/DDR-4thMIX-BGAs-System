@@ -57,7 +57,8 @@ local layer4 = {
     fadelength = 8,
     fadeoffset = 4,
     properties = {
-        "fadelinear"
+        "fadelinear",
+        "fadeout"
     }
 }
 
