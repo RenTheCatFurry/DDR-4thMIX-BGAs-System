@@ -45,6 +45,25 @@ local layer3 = {
 local layer4 = {
     textures = {
         {
+            img = "feve/hd7_feve 1x4 (stretch).png",
+            delay = 1/15,
+            properties = {
+                "framesreverse"
+            }
+        },
+    },
+    effect = "bgmirror1",
+    coloranim = 1,
+    fadelength = 8,
+    fadeoffset = 4,
+    properties = {
+        "fadelinear"
+    }
+}
+
+local layer5 = {
+    textures = {
+        {
             img = "feve/g99_feve blackbg 4x3 (stretch).png",
             properties = {
                 "noframes"
@@ -55,15 +74,14 @@ local layer4 = {
     fadelength = 4
 }
 
-local layer5 = {
+local layer6 = {
     textures = {
         {
         }
-    },
-    fadelength = 8
+    }
 }
 
-local layer6 = {
+local layer7 = {
     textures = {
         {
         }
@@ -71,7 +89,7 @@ local layer6 = {
     alpha = 0.5
 }
 
-local layer7 = {
+local layer8 = {
     textures = {
         {
             img = "feve/aba_feve f01 c01 8x8.png",
@@ -99,7 +117,7 @@ return Def.ActorFrame{
         end)
     end,
 
-    -- layer 1
+    -- layers
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
         BeatMessageCommand = function(self, params)
@@ -113,7 +131,6 @@ return Def.ActorFrame{
         end
     },
 
-    -- layer 2
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2),
         BeatMessageCommand = function(self, params)
@@ -127,13 +144,12 @@ return Def.ActorFrame{
         end
     },
 
-    -- layer 3
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer3),
         BeatMessageCommand = function(self, params)
             beat = params.beat
 
-            if beat >= 3 and beat <= 5 then
+            if beat == 3 then
                 self:diffusealpha(1)
             else
                 self:diffusealpha(0)
@@ -141,9 +157,8 @@ return Def.ActorFrame{
         end
     },
 
-    -- layer 4
     Def.ActorFrame{
-        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer4),
+        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer5),
         BeatMessageCommand = function(self, params)
             beat = params.beat
 
@@ -155,9 +170,8 @@ return Def.ActorFrame{
         end
     },
 
-    -- layer 5
     Def.ActorFrame{
-        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer5),
+        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer6),
         BeatMessageCommand = function(self, params)
             beat = params.beat
 
@@ -170,16 +184,26 @@ return Def.ActorFrame{
     },
 
     Def.ActorFrame{
-        -- layer 6
-        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer6),
-
-        -- layer 7
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer7),
+        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer8),
 
         BeatMessageCommand = function(self, params)
             beat = params.beat
 
             if beat == 6 or beat == 7 then
+                self:diffusealpha(1)
+            else
+                self:diffusealpha(0)
+            end
+        end
+    },
+
+    Def.ActorFrame{
+        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer4),
+        BeatMessageCommand = function(self, params)
+            beat = params.beat
+
+            if beat >= 4 and beat <= 5 then
                 self:diffusealpha(1)
             else
                 self:diffusealpha(0)
