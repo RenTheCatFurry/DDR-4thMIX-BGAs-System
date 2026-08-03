@@ -6,11 +6,18 @@ local layer1 = {
                 "noframes"
             }
         }
+    }
+}
+
+local fade = {
+    textures = {
+        {
+            img = "blackbg (stretch).png"
+        }
     },
     fadelength = 1,
     properties = {
-        "fadelinear",
-        "fadeout"
+        "fadelinear"
     }
 }
 
@@ -29,5 +36,6 @@ local layer2 = {
 
 return Def.ActorFrame{
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
+    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", fade),
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2)
 }
