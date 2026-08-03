@@ -954,7 +954,10 @@ local layer = Def.ActorFrame{
                 -- animation fade normal
                 else
                     local start_angle = 270
-                    if fade_out then start_angle = 90 end
+                        
+                    if fade_out then
+                        start_angle = 90 + ((360 * fade_offset) / fade_length)
+                    end
 
                     if fade_offset then start_angle = start_angle + (360 * fade_offset) end
 
