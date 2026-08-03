@@ -3,11 +3,21 @@ local layer1 = {
         {
         }
     },
-    effect = "bgmirror2",
+    scroll = {8,1},
     coloranim = 2,
+    properties = {
+        "invert",
+    }
+}
+
+local fade = {
+    textures = {
+        {
+            img = "blackbg (stretch).png"
+        }
+    },
     fadelength = 4,
-    fadeoffset = -0.15,
-    alpha = 0.75
+    fadeoffset = -0.25
 }
 
 local layer2 = {
@@ -15,18 +25,19 @@ local layer2 = {
         {
         }
     },
-    scroll = {8,1},
+    effect = "bgmirror2",
     coloranim = 2,
-    blendmode = "Add",
     fadelength = 4,
-    fadeoffset = -0.2,
+    fadeoffset = 0.25,
+    alpha = 0.75,
+    blendmode = "Add",
     properties = {
-        "invert",
         "fadeout"
     }
 }
 
 return Def.ActorFrame{
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
+    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", fade),
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2)
 }
