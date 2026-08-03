@@ -3,7 +3,7 @@ local layer1 = {
         {
         }
     },
-    alpha = 0.5,
+    alpha = 0.75,
     properties = {
         "invert"
     }
@@ -17,8 +17,7 @@ local layer2 = {
             frames = {4,5,6,7,8,9},
             delay = 1/10,
             properties = {
-                "framesanim",
-                --"framesreverse"
+                "framesanim"
             }
         }
     },
@@ -27,7 +26,6 @@ local layer2 = {
     blendmode = "Add",
     coloranim = 2,
     fadelength = 4,
-    alpha = 0.75,
     properties = {
         "fadeout"
     }
