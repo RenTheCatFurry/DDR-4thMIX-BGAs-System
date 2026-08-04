@@ -6,13 +6,11 @@ local layer1 = {
             frames = {5}
         }
     },
-    scroll = {1,8/3},
-    alpha = 0.5,
-    fadelength = 1,
-    fadealpha = 0.5,
-    properties = {
-        "fadeout"
-    }
+    scroll = {1,3},
+    alpha = 0.75,
+    fadelength = 0.75,
+    fadealpha = 1/3,
+    fadeoffset = -0.25
 }
 
 local layer2 = {
