@@ -6,18 +6,20 @@ local layer1 = {
     scroll = {8,1},
     coloranim = 2,
     properties = {
-        "invert",
+        "invert"
     }
 }
 
-local fade = {
+local blackbg = {
     textures = {
         {
-            img = "blackbg (stretch).png"
         }
     },
     fadelength = 4,
-    fadeoffset = -0.25
+    fadeoffset = 0.25,
+    properties = {
+        "blackbg"
+    }
 }
 
 local layer2 = {
@@ -30,14 +32,11 @@ local layer2 = {
     fadelength = 4,
     fadeoffset = 0.25,
     alpha = 0.75,
-    blendmode = "Add",
-    properties = {
-        "fadeout"
-    }
+    blendmode = "Add"
 }
 
 return Def.ActorFrame{
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
-    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", fade),
+    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", blackbg),
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2)
 }
