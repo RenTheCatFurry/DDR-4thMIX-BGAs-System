@@ -250,7 +250,8 @@ elseif effect == "bgwarp" or effect == "bgwarpreverse" then
 elseif
 effect == "bgdistort1" or
 effect == "bgdistort2" or
-effect == "bgdistort3"
+effect == "bgdistort3" or
+effect == "bgdistort4"
 then
     bgdistort_effect = true
     bg_mode = true
@@ -877,10 +878,8 @@ if bgdistort_effect then
         end
     end
 
-    local tex_to_load = first_texture.img
-
     bgdistort_amv = Def.ActorMultiVertex{
-        Texture = tex_to_load,
+        Texture = first_texture.img,
 
         InitCommand = function(self)
             self:SetDrawState{ Mode = "DrawMode_Quads" }
@@ -938,6 +937,24 @@ if bgdistort_effect then
                 end
 
             elseif effect == "bgdistort3" then
+                for i = 1, 35 do
+                    anim_vertices(
+                        i,
+                        math.sin(math.rad(((beat + ((1 / 87.5) * i)) % 1) * 360)) * (SCREEN_WIDTH / 40),
+                        math.sin(math.rad(((beat + ((1 / 87.5) * i)) % 1) * 360)) * (SCREEN_HEIGHT / 40)
+                    )
+                end
+
+            elseif effect == "bgdistort4" then
+                for i = 1, 35 do
+                    local col = (((i - 1) % 7) + 1) / 2
+
+                    anim_vertices(
+                        i,
+                        math.sin(math.rad(((beat + (col / 7)) % 1) * 360)) * (SCREEN_WIDTH / 32),
+                        math.sin(math.rad(((beat + (col / 7)) % 1) * 360)) * (SCREEN_HEIGHT / 64)
+                    )
+                end
             end
 
             self:SetVertices(vertices)
