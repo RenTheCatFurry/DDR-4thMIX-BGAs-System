@@ -3,7 +3,7 @@ local layer1 = {
         {
         }
     },
-    alpha = 0.5
+    alpha = 2/3
 }
 
 local layer2 = {
