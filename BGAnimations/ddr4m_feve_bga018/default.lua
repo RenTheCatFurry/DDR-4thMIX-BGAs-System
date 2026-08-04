@@ -9,7 +9,7 @@ local layer1 = {
     },
     alpha = 2/3,
     fadelength = 4,
-    fadeoffset = -1,
+    fadeoffset = -0.25,
     properties = {
         "fadeout"
     }
