@@ -6,12 +6,9 @@ local layer1 = {
             delay = 1/15
         }
     },
-    alpha = 0.75,
+    alpha = 0.8,
     fadelength = 4,
-    fadealpha = 0.5,
-    properties = {
-        "fadeout"
-    }
+    fadealpha = 0.6
 }
 
 local layer2 = {
@@ -22,7 +19,7 @@ local layer2 = {
                 "noframes"
             }
         }
-    },
+    }
 }
 
 return Def.ActorFrame{
