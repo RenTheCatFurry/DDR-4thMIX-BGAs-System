@@ -11,7 +11,10 @@ local layer1 = {
     scroll = {1,4},
     fadelength = 4,
     fadealpha = 0.5,
-    fadeoffset = 0.75
+    fadeoffset = 0.75,
+    properties = {
+        "stretchxres"
+    }
 }
 
 local layer2 = {
@@ -34,7 +37,6 @@ local layer2 = {
 }
 
 return Def.ActorFrame{
-    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", {textures={{}},properties={"blackbg"}}),
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2)
 }
