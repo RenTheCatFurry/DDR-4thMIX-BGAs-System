@@ -19,7 +19,7 @@ local layer2 = {
     },
     coloranim = 0,
     effect = "wagyout",
-    effectlength = 3
+    effectlength = 8/3
 }
 
 return Def.ActorFrame{
