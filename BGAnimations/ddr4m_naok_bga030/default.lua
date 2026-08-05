@@ -13,7 +13,7 @@ local layer2 = {
     },
     blendmode = "Add",
     effect = "bgmirror2",
-    alpha = 0.8
+    alpha = 0.75
 }
 
 return Def.ActorFrame{
