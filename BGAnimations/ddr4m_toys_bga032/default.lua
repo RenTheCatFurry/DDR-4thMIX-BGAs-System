@@ -63,77 +63,56 @@ local layer5 = {
     effectoffset = 1
 }
 
+local function ShowOn(...)
+    local visible = {}
+
+    for _, v in ipairs({...}) do
+        visible[v] = true
+    end
+
+    return function(self, params)
+        self:visible(visible[params.beat] or false)
+    end
+end
+
 return Def.ActorFrame{
-    -- config beat
     OnCommand = function(self)
         local start_beat = GAMESTATE:GetSongPosition():GetSongBeat()
+        local lastBeat = -1
+        local msg = {}
 
         self:SetUpdateFunction(function(self)
-            local beat = GAMESTATE:GetSongPosition():GetSongBeat()
+            local beat = math.floor(
+                (GAMESTATE:GetSongPosition():GetSongBeat() - start_beat)
+            ) % 4
 
-            beat = beat - start_beat
-            beat = math.floor(beat % 4)
-
-            MESSAGEMAN:Broadcast("Beat", {beat = beat})
+            if beat ~= lastBeat then
+                lastBeat = beat
+                msg.beat = beat
+                MESSAGEMAN:Broadcast("Keyframe", msg)
+            end
         end)
     end,
 
-    -- layer 1
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
 
-    -- layer 2
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2),
-        BeatMessageCommand = function(self, params)
-            local beat = params.beat
-            
-            if beat == 0 then
-                self:diffusealpha(1)
-            else
-                self:diffusealpha(0)
-            end
-        end
+        KeyframeMessageCommand = ShowOn(0)
     },
 
-    -- layer 3
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer3),
-        BeatMessageCommand = function(self, params)
-            local beat = params.beat
-            
-            if beat == 1 then
-                self:diffusealpha(1)
-            else
-                self:diffusealpha(0)
-            end
-        end
+        KeyframeMessageCommand = ShowOn(1)
     },
 
-    -- layer 4
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer4),
-        BeatMessageCommand = function(self, params)
-            local beat = params.beat
-            
-            if beat == 2 then
-                self:diffusealpha(1)
-            else
-                self:diffusealpha(0)
-            end
-        end
+        KeyframeMessageCommand = ShowOn(2)
     },
-    
-    -- layer 5
+
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer5),
-        BeatMessageCommand = function(self, params)
-            local beat = params.beat
-            
-            if beat == 3 then
-                self:diffusealpha(1)
-            else
-                self:diffusealpha(0)
-            end
-        end
-    },
+        KeyframeMessageCommand = ShowOn(3)
+    }
 }
