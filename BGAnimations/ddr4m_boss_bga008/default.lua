@@ -8,7 +8,7 @@ local layer1 = {
         }
     },
     effect = "bgmirror2",
-    alpha = 7/8
+    alpha = 0.75
 }
 
 local layer2 = {
