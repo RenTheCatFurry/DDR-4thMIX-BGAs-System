@@ -83,34 +83,48 @@ local layer5 = {
     }
 }
 
+local function ShowOn(...)
+    local visible = {}
+
+    for _, v in ipairs({...}) do
+        visible[v] = true
+    end
+
+    return function(self, params)
+        self:visible(visible[params.beat] or false)
+    end
+end
+
 return Def.ActorFrame{
-    -- config beat
     OnCommand = function(self)
         local start_beat = GAMESTATE:GetSongPosition():GetSongBeat()
+        local lastBeat = -1
+        local msg = {}
 
         self:SetUpdateFunction(function(self)
-            local beat = GAMESTATE:GetSongPosition():GetSongBeat()
+            local beat = math.floor(
+                (GAMESTATE:GetSongPosition():GetSongBeat() - start_beat) / 8
+            ) % 2
 
-            beat = beat - start_beat
-            beat = math.floor(beat / 8) % 2
-
-            MESSAGEMAN:Broadcast("Keyframe", {beat = beat})
+            if beat ~= lastBeat then
+                lastBeat = beat
+                msg.beat = beat
+                MESSAGEMAN:Broadcast("Keyframe", msg)
+            end
         end)
     end,
 
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
-    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2),
-    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer3),
 
     Def.ActorFrame{
-        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
+        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2),
+        LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer3),
+        KeyframeMessageCommand = ShowOn(0)
+    },
+
+    Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer5),
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer4),
-
-        KeyframeMessageCommand = function(self, params)
-            local beat = params.beat
-
-            self:diffusealpha(beat)
-        end
+        KeyframeMessageCommand = ShowOn(1)
     }
 }
