@@ -6,7 +6,8 @@ local layer1 = {
                 "noframes"
             }
         }
-    }
+    },
+    alpha = 0.75
 }
 
 local layer2 = {
@@ -21,7 +22,7 @@ local layer2 = {
     },
     effect = "bgmirror1",
     fadelength = 4,
-    alpha = 0.75,
+    alpha = 0.6,
     blendmode = "Add",
     coloranim = 1,
     properties = {
