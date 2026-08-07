@@ -39,6 +39,7 @@ local layer2 = {
 }
 
 return Def.ActorFrame{
+    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", blackbg),
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2)
 }
