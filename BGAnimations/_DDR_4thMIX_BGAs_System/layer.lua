@@ -1025,7 +1025,37 @@ if bgdistort_effect then
                 end
             
             elseif effect == "bgdistort7" then
-                SCREENMAN:SystemMessage("Effect \""..effect.."\" under construction.")
+                local function get_delay(vert)
+                    local x = ((vert - 1) % 7) + 1
+                    local y = math.floor((vert - 1) / 7) + 1
+
+                    local dx = x - 4
+                    local dy = y - 3
+
+                    return math.sqrt(dx * dx + dy * dy) * (1 / 6)
+                end
+
+                local offsets = {
+                    { 0.00,  0.00}, {-0.25, -0.25}, {-0.40, -0.90}, { 0.00, -1.25}, { 0.40, -0.90}, { 0.25, -0.25}, { 0.00,  0.00},
+                    { 0.00,  0.00}, {-0.90, -0.35}, {-1.00, -1.00}, { 0.00, -1.25}, { 1.00, -1.00}, { 0.90, -0.35}, { 0.00,  0.00},
+                    { 0.00,  0.00}, {-1.20,  0.00}, {-1.35,  0.00}, { 0.00,  0.00}, { 1.35,  0.00}, { 1.20,  0.00}, { 0.00,  0.00},
+                    { 0.00,  0.00}, {-0.90,  0.35}, {-1.00,  1.00}, { 0.00,  1.25}, { 1.00,  1.00}, { 0.90,  0.35}, { 0.00,  0.00},
+                    { 0.00,  0.00}, {-0.25,  0.25}, {-0.40,  0.90}, { 0.00,  1.25}, { 0.40,  0.90}, { 0.25,  0.25}, { 0.00,  0.00}
+                }
+
+                for vert = 1, 35 do
+                    local phase = beat - get_delay(vert)
+                    local wave = math.sin(phase * math.pi * 2)
+
+                    local coord_x = (SCREEN_WIDTH / 124) * wave
+                    local coord_y = (SCREEN_HEIGHT / 93) * wave
+
+                    anim_vertices(
+                        vert,
+                        coord_x * offsets[vert][1],
+                        coord_y * offsets[vert][2]
+                    )
+                end
 
             elseif effect == "bgdistort8" then
                 SCREENMAN:SystemMessage("Effect \""..effect.."\" under construction.")
