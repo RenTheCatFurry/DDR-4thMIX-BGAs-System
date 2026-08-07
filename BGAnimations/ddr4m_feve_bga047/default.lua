@@ -20,7 +20,8 @@ local layer2 = {
     effectlength = 1,
     effectoffset = -0.25,
     blendmode = "Add",
-    coloranim = 3
+    coloranim = 3,
+    alpha = 0.75
 }
 
 return Def.ActorFrame{
