@@ -18,6 +18,7 @@ local layer2 = {
     },
     effect = "pulsein",
     effectlength = 1,
+    effectoffset = -0.25,
     blendmode = "Add",
     coloranim = 3
 }
