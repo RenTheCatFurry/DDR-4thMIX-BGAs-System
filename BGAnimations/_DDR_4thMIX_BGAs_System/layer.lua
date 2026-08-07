@@ -1792,11 +1792,16 @@ for i = 0, num_sprites - 1 do
                 if wagpulse_effect then
                     beat = beat * 360 / effect_length % 360
 
+                    -- start angle
                     local start_angle = 270
+                    
                     if effect == "wagxout" or effect == "wagyout" or effect == "pulseout" then
                         start_angle = 90
                     end
 
+                    start_angle = start_angle + (360 * effect_offset)
+
+                    -- animation
                     local beat_sin = 0.5 + math.sin(math.rad(start_angle + beat)) / 2
 
                     local function anim(v)
