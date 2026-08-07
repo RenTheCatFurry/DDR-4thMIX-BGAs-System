@@ -6,7 +6,7 @@ local layer1 = {
     effect = "bgdistort2",
     effectlength = 2,
     effectstep = 1,
-    alpha = 0.85
+    alpha = 0.8
 }
 
 local blackbg = {
@@ -32,13 +32,13 @@ local layer2 = {
             }
         },
     },
+    alpha = 0.8,
     effect = "bgmirror1",
     blendmode = "Add",
     coloranim = 2
 }
 
 return Def.ActorFrame{
-    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", blackbg),
     LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2)
 }
