@@ -924,6 +924,8 @@ if bgdistort_effect then
                 beat = beat / effect_length
             end
 
+            beat = (beat + effect_offset) % 1
+
             if effect == "bgdistort1" then
                 for i = 1, 35 do
                     anim_vertices(
