@@ -919,12 +919,15 @@ if bgdistort_effect then
             local beat = params.beat
 
             if effect_step then
-                beat = (math.floor(beat / effect_step) / effect_length * effect_step) % 1
-            else
-                beat = beat / effect_length
-            end
+                beat = (math.floor((
+                    beat + effect_offset
+                ) / effect_step) / effect_length * effect_step) % 1
 
-            beat = (beat + effect_offset) % 1
+            else
+                beat = ((
+                    beat + effect_offset
+                ) / effect_length) % 1
+            end
 
             if effect == "bgdistort1" then
                 for i = 1, 35 do
