@@ -1032,7 +1032,7 @@ if bgdistort_effect then
                     local dx = x - 4
                     local dy = y - 3
 
-                    return math.sqrt(dx * dx + dy * dy) * (1 / 6)
+                    return math.sqrt(dx * dx + dy * dy) * 0.12
                 end
 
                 local offsets = {
@@ -1047,8 +1047,8 @@ if bgdistort_effect then
                     local phase = beat - get_delay(vert)
                     local wave = math.sin(phase * math.pi * 2)
 
-                    local coord_x = (SCREEN_WIDTH / 124) * wave
-                    local coord_y = (SCREEN_HEIGHT / 93) * wave
+                    local coord_x = (SCREEN_WIDTH / 100) * wave
+                    local coord_y = (SCREEN_HEIGHT / 75) * wave
 
                     anim_vertices(
                         vert,
