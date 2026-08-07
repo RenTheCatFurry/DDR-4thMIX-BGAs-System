@@ -1009,7 +1009,24 @@ if bgdistort_effect then
                 end
             
             elseif effect == "bgdistort6" then
-                SCREENMAN:SystemMessage("Effect \""..effect.."\" under construction.")
+                local coord_x = (SCREEN_WIDTH / 48) * math.sin(math.rad((beat * 360) % 360))
+                local coord_y = (SCREEN_HEIGHT / 36) * math.sin(math.rad((beat * 360) % 360))
+
+                local offsets = {
+                    { 1.25,  0.75}, {-0.25, -0.25}, {-0.40, -0.90}, { 0.00, -1.25}, { 0.40, -0.90}, { 0.25, -0.25}, {-1.25,  0.75},
+                    { 0.30,  0.15}, {-0.90, -0.35}, {-1.00, -1.00}, { 0.00, -1.25}, { 1.00, -1.00}, { 0.90, -0.35}, {-0.30,  0.15},
+                    { 0.00,  0.00}, {-1.20,  0.00}, {-1.35,  0.00}, { 0.00,  0.00}, { 1.35,  0.00}, { 1.20,  0.00}, { 0.00,  0.00},
+                    { 0.30, -0.15}, {-0.90,  0.35}, {-1.00,  1.00}, { 0.00,  1.25}, { 1.00,  1.00}, { 0.90,  0.35}, {-0.30,  0.15},
+                    { 1.25, -0.75}, {-0.25,  0.25}, {-0.40,  0.90}, { 0.00,  1.25}, { 0.40,  0.90}, { 0.25,  0.25}, {-1.25, -0.75}
+                }
+
+                for vert = 1, #offsets do
+                    anim_vertices(
+                        vert,
+                        coord_x * offsets[vert][1],
+                        coord_y * offsets[vert][2]
+                    )
+                end
 
             elseif effect == "bgdistort7" then
                 SCREENMAN:SystemMessage("Effect \""..effect.."\" under construction.")
