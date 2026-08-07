@@ -6,7 +6,7 @@ local layer1 = {
     effect = "bgdistort2",
     effectlength = 2,
     effectstep = 1,
-    alpha = 0.8
+    alpha = 0.75
 }
 
 local blackbg = {
@@ -32,7 +32,7 @@ local layer2 = {
             }
         },
     },
-    alpha = 0.8,
+    alpha = 0.75,
     effect = "bgmirror1",
     blendmode = "Add",
     coloranim = 2
