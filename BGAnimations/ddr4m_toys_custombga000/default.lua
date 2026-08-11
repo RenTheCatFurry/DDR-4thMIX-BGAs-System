@@ -7,10 +7,7 @@ local layer1 = {
             img = "toys/bdc_toys (stretch).png"
         }
     },
-    scroll = {8,4},
-    properties = {
-        "effectpingpong"
-    }
+    scroll = {8,3}
 }
 
 local layer2 = {
@@ -22,7 +19,7 @@ local layer2 = {
         }
     },
     effect = "particlesright",
-    effectlength = 4
+    effectlength = 12
 }
 
 return Def.ActorFrame{
