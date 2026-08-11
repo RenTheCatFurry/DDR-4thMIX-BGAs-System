@@ -2697,14 +2697,22 @@ for i = 0, num_sprites - 1 do
                         effect == "particlesdownspin" or
                         effect == "particlesrightspin"
                         then
-                            self:rotationz(-((beat * (360 / spin_length)) % 360))
+                            if effect == "particlesdownspin" or effect == "particlesrightspin" then
+                                self:rotationz(((360 * i / num_sprites) - (beat * 360 / spin_length)) % 360)
+                            else
+                                self:rotationz(-((beat * (360 / spin_length)) % 360))
+                            end
 
                         elseif
                         effect == "particlesout" or
                         effect == "particlesupspin" or
                         effect == "particlesleftspin"
                         then
-                            self:rotationz((beat * (360 / spin_length)) % 360)
+                            if effect == "particlesupspin" or effect == "particlesleftspin" then
+                                self:rotationz(((360 * i / num_sprites) + (beat * 360 / spin_length)) % 360)
+                            else
+                                self:rotationz((beat * (360 / spin_length)) % 360)
+                            end
                         end
 
                     else
