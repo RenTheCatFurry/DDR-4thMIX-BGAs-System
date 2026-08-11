@@ -812,7 +812,7 @@ if bgdistort_effect then
 
     if load_song_bg or colorama_fix then
         if SCREEN_RATIO > 1 then
-            adjust_u = (SCREEN_WIDTH / 1024)
+            adjust_u = (SCREEN_WIDTH / 1024) / math.floor(SCREEN_RATIO)
         else
             adjust_u = (SCREEN_WIDTH / 1024) * 2
         end
