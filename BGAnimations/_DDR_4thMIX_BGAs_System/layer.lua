@@ -789,7 +789,7 @@ local function load_sprite(i, tex)
                 -- animation
                 if i == 0 then
                     self:valign(0)
-                    self:zoomy(SCREEN_HEIGHT)
+                    self:zoomto(SCREEN_WIDTH, SCREEN_HEIGHT ^ 2)
 
                     self:cropbottom(1 - beat_bgwarp)
                     self:y(beat_bgwarp * ((-SCREEN_HEIGHT ^ 2) + SCREEN_HEIGHT))
