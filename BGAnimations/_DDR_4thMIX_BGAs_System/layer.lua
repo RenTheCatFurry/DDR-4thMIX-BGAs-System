@@ -2692,10 +2692,18 @@ for i = 0, num_sprites - 1 do
                     end
 
                     if spin_length then
-                        if effect == "particlesin" then
+                        if
+                        effect == "particlesin" or
+                        effect == "particlesdownspin" or
+                        effect == "particlesrightspin"
+                        then
                             self:rotationz(-((beat * (360 / spin_length)) % 360))
 
-                        elseif effect == "particlesout" then
+                        elseif
+                        effect == "particlesout" or
+                        effect == "particlesupspin" or
+                        effect == "particlesleftspin"
+                        then
                             self:rotationz((beat * (360 / spin_length)) % 360)
                         end
 
