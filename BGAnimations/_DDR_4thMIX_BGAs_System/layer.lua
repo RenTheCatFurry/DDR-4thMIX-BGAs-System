@@ -811,7 +811,12 @@ if bgdistort_effect then
     local adjust_v = 1
 
     if load_song_bg or colorama_fix then
-        adjust_u = (SCREEN_WIDTH / 1024)
+        if SCREEN_RATIO > 1 then
+            adjust_u = (SCREEN_WIDTH / 1024)
+        else
+            adjust_u = (SCREEN_WIDTH / 1024) * 2
+        end
+
         adjust_v = (SCREEN_HEIGHT / 512)
     end
 
