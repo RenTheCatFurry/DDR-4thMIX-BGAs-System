@@ -18,7 +18,10 @@ local layer2 = {
         }
     },
     effect = "particlesdown",
-    effectlength = 4
+    effectlength = 4,
+    properties = {
+        "depthopacity"
+    }
 }
 
 return Def.ActorFrame{
