@@ -20,7 +20,7 @@ local layer2 = {
     },
     effect = "dvdbounce",
     effectlength = 4,
-    alpha = 7/8,
+    alpha = 0.75,
     blendmode = "Add"
 }
 
