@@ -23,11 +23,10 @@ local layer2 = {
     },
     scroll = {4,1},
     blendmode = "Add",
-    fadelength = 4,
+    fadelength = 8,
     properties = {
         "fadelinear",
-        "fadeout",
-        "fadestop"
+        "fadeout"
     }
 }
 
