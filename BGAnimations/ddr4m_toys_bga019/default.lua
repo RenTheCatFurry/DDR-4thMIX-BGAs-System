@@ -23,7 +23,8 @@ local layer2 = {
         }
     },
     effect = "particlesdownspin",
-    effectlength = 4
+    effectlength = 3,
+    spinlength = 2
 }
 
 return Def.ActorFrame{
