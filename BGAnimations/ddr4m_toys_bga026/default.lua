@@ -3,7 +3,8 @@ local layer1 = {
         {
         }
     },
-    scroll = {1,8}
+    scroll = {1,8},
+    alpha = 7/8
 }
 
 local layer2 = {
@@ -15,7 +16,7 @@ local layer2 = {
         }
     },
     effect = "particlesright",
-    effectlength = 6,
+    effectlength = 4,
     coloranim = 2
 }
 
