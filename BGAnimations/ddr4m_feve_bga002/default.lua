@@ -24,7 +24,7 @@ local layer2 = {
         },
     },
     effect = "scrollxy",
-    effectlength = 8
+    effectlength = 10
 }
 
 return Def.ActorFrame{
