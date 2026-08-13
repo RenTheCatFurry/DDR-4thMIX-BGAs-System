@@ -19,7 +19,6 @@ local layer2 = {
         {
             img = "naok/i99_naok 4x3 (stretch).png",
             size = {80,80},
-            rgb = {0.75,1,1},
             frames = {4,5,6,7},
             properties = {
                 "framesanim"
