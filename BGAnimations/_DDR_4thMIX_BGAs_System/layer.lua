@@ -290,7 +290,18 @@ end
 
 -- field of view (for particle and spiral effects)
 if particles_effect or spiral_effect then
-    field_of_view = 166
+    if
+    effect ~= "particlesleft" or
+    effect ~= "particlesleftspin" or
+    effect ~= "particlesright" or
+    effect ~= "particlesrightspin" or
+    effect ~= "particlesup" or
+    effect ~= "particlesupspin" or
+    effect ~= "particlesdown" or
+    effect ~= "particlesdownspin"
+    then
+        field_of_view = 166
+    end
 end
 
 -- activate scroll
@@ -2389,31 +2400,8 @@ for i = 0, num_sprites - 1 do
                     random_pos.y = math.random(-SCREEN_HEIGHT / 2, SCREEN_HEIGHT * 1.5)
                 
                 else
-                    local range_x_min = (14.35 * SCREEN_RATIO * 20) / num_sprites * random_index
-                    local range_x_max = SCREEN_WIDTH - (14.35 * SCREEN_RATIO * 20) / num_sprites * random_index
-
-                    local range_y_min = (14.35 * 20) / num_sprites * random_index
-                    local range_y_max = SCREEN_HEIGHT - ((14.35 * 20) / num_sprites * random_index)
-
-                    if
-                    effect == "particlesleft" or
-                    effect == "particlesleftspin" or
-                    effect == "particlesright" or
-                    effect == "particlesrightspin"
-                    then
-                        if range_x_min > range_x_max then
-                            random_pos.y = math.random(range_y_max, range_y_min)
-                        else
-                            random_pos.y = math.random(range_y_min, range_y_max)
-                        end
-
-                    else
-                        if range_x_min > range_x_max then
-                            random_pos.x = math.random(range_x_max, range_x_min)
-                        else
-                            random_pos.x = math.random(range_x_min, range_x_max)
-                        end
-                    end
+                    random_pos.x = math.random(0, SCREEN_WIDTH)
+                    random_pos.y = math.random(0, SCREEN_HEIGHT)
                 end
             end
 
@@ -2616,70 +2604,56 @@ for i = 0, num_sprites - 1 do
                         self:z(anim_z)
 
                     else
-                        self:zoom(0.25)
-                        self:z((47 / num_sprites) * random_index)
+                        local expand = (i / num_sprites) + 1
+                        local speed
 
-                        local start_pos = {
-                            x = SCREEN_WIDTH + sprite_size.w / 2,
-                            y = SCREEN_HEIGHT + sprite_size.w / 2
-                        }
+                        self:zoom(0.25 + (i / num_sprites / 1.5))
 
-                        -- X and Y movement
                         if
-                        effect == "particlesleft" or
-                        effect == "particlesleftspin" or
-                        effect == "particlesright" or
-                        effect == "particlesrightspin"
+                        effect == "particlesup" or
+                        effect == "particlesupspin" or
+                        effect == "particlesdown" or
+                        effect == "particlesdownspin"
                         then
-                            local anim = (
-                                start_pos.x - (
-                                    (start_pos.x / num_sprites) * i) + (beat * start_pos.x / effect_length
-                                )
-                            ) % start_pos.x
-
-                            if effect == "particlesleft" or effect == "particlesleftspin" then
-                                anim = (
-                                    start_pos.x - (
-                                        (start_pos.x / num_sprites) * i) - (beat * start_pos.x / effect_length
-                                    )
-                                ) % start_pos.x
-                            end
-
-                            self:x(anim)
-                            self:y(random_pos.y)
-                        else
-                            local anim = (
-                                start_pos.y - (
-                                    (start_pos.y / num_sprites) * i) + (beat * start_pos.y / effect_length
-                                )
-                            ) % start_pos.y
-
                             if effect == "particlesup" or effect == "particlesupspin" then
-                                anim = (
-                                    start_pos.y - (
-                                        (start_pos.y / num_sprites) * i) - (beat * start_pos.y / effect_length
-                                    )
-                                ) % start_pos.y
+                                speed = -SCREEN_HEIGHT / effect_length
+                            else
+                                speed = SCREEN_HEIGHT / effect_length
                             end
 
                             self:x(random_pos.x)
-                            self:y(anim)
+                            self:y(-(sprite_size.h / 2) + 
+                                (((beat * speed) + random_pos.y) % SCREEN_HEIGHT) * (1.25 * expand)
+                            )
+
+                        else
+                            if effect == "particlesleft" or effect == "particlesleftspin" then
+                                speed = -SCREEN_HEIGHT / effect_length
+                            else
+                                speed = SCREEN_HEIGHT / effect_length
+                            end
+
+                            self:x(-(sprite_size.w / 2) + 
+                                (((beat * speed) + random_pos.x) % SCREEN_WIDTH) * (1.25 * expand)
+                            )
+                            self:y(random_pos.y)
                         end
                     end
 
                     -- depth opacity
                     if depth_opacity then
                         local opacity_value
-
                         if
                         effect == "particlesin" or
                         effect == "particlesbouncein" or
+                        effect == "particleslaserin" or
                         effect == "particlesout" or
-                        effect == "particlesbounceout"
+                        effect == "particlesbounceout" or
+                        effect == "particleslaserout"
                         then
                             opacity_value = (1000 + self:GetZ()) / 1000
                         else
-                            opacity_value = 0.15 + (self:GetZ() / (47 * 1.15))
+                            opacity_value = 0.25 + (i / num_sprites / 1.5)
                         end
 
                         self:diffuse(opacity_value, opacity_value, opacity_value, 1)
