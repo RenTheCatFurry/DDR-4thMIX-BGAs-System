@@ -18,7 +18,7 @@ local layer2 = {
         }
     },
     effect = "particlesupspin",
-    effectlength = 8,
+    effectlength = 6,
     spinlength = 4
 }
 
