@@ -3,8 +3,7 @@ local layer1 = {
         {
         }
     },
-    scroll = {1,8},
-    alpha = 7/8
+    scroll = {1,8}
 }
 
 local layer2 = {
