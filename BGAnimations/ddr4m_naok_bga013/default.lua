@@ -25,7 +25,7 @@ local layer2 = {
         }
     },
     effect = "particlesleft",
-    effectlength = 20
+    effectlength = 16
 }
 
 return Def.ActorFrame{
