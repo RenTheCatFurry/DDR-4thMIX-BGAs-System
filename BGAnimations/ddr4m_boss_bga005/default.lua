@@ -19,7 +19,7 @@ local layer2 = {
         }
     },
     effect = "particlesup",
-    effectlength = 4,
+    effectlength = 3,
     blendmode = "Add",
     coloranim = 8
 }
