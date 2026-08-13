@@ -7,8 +7,7 @@ local layer1 = {
             frames = {2}
         }
     },
-    scroll = {1,4},
-    alpha = 0.75
+    scroll = {1,4}
 }
 
 local layer2 = {
