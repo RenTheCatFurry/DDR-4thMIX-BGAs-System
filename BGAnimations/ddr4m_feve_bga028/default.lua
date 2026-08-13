@@ -16,7 +16,7 @@ local layer2 = {
         }
     },
     effect = "particlesright",
-    effectlength = 2.5,
+    effectlength = 2,
     blendmode = "Add",
     alpha = 0.75,
     coloranim = 2
