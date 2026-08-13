@@ -8,6 +8,7 @@ local layer1 = {
     },
     effect = "particlesrightspin",
     effectlength = 4,
+    spinlength = 4,
     blendmode = "Add",
     coloranim = 2
 }
