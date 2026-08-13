@@ -17,7 +17,7 @@ local layer2 = {
         }
     },
     effect = "particlesin",
-    effectlength = 10,
+    effectlength = 8,
     spinlength = 4,
     blendmode = "Add",
     alpha = 0.75,
