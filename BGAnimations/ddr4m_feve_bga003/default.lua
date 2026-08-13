@@ -6,9 +6,9 @@ local layer1 = {
             delay = 1/15
         }
     },
-    alpha = 0.8,
+    alpha = 2/3,
     fadelength = 4,
-    fadealpha = 0.6
+    fadealpha = 0.5
 }
 
 local layer2 = {
