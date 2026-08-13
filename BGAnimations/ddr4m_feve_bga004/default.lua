@@ -29,7 +29,8 @@ local layer2 = {
         }
     },
     effect = "particlesdownspin",
-    effectlength = 16,
+    effectlength = 12,
+    spinlength = 8,
     blendmode = "Add",
     coloranim = 2
 }
