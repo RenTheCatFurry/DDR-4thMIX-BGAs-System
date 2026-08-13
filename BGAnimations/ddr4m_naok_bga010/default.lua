@@ -25,7 +25,7 @@ local layer2 = {
     },
     blendmode = "Add",
     effect = "particlesright",
-    effectlength = 12
+    effectlength = 8
 }
 
 return Def.ActorFrame{
