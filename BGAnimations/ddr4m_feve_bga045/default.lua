@@ -18,7 +18,7 @@ local layer2 = {
     },
     blendmode = "Add",
     coloranim = 1,
-    alpha = 0.6
+    alpha = 0.7
 }
 
 return Def.ActorFrame{
