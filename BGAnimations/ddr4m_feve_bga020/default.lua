@@ -13,7 +13,7 @@ local layer1 = {
             img = "feve/aba_feve f03 c11 8x8.png"
         }
     },
-    alpha = 0.75,
+    alpha = 0.6,
     properties = {
         "coloramafix"
     }
