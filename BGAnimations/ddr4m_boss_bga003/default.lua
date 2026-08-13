@@ -18,7 +18,7 @@ local layer2 = {
         }
     },
     effect = "particlesdown",
-    effectlength = 4,
+    effectlength = 3,
     properties = {
         "depthopacity"
     }
