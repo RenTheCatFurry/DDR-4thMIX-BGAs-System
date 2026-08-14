@@ -1967,7 +1967,7 @@ local layer = Def.ActorFrame{
                 local beat_fade
 
                 -- animation fade linear
-                if fade_linear then
+                if fade_linear or fade_linear_invert then
                     local fade_toggle = math.floor((beat / fade_length * 2) % 2) 
         
                     if fade_stop then
