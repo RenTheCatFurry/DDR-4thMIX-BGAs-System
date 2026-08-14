@@ -2597,7 +2597,7 @@ for i = 0, num_sprites - 1 do
                         local expand = (i / num_sprites) + 1
                         local speed
 
-                        self:zoom(0.25 + (i / num_sprites / 1.5))
+                        self:zoom(0.25 + ((i + 1) / num_sprites / 1.5))
 
                         if
                         effect == "particlesup" or
