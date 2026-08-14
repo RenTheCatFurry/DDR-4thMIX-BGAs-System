@@ -826,63 +826,47 @@ end
 local bgdistort_amv
 
 if bgdistort_effect then
-    -- adjust uv
-    local adjust_u = 1
-    local adjust_v = 1
-
-    if load_song_bg or colorama_fix then
-        if get_version_date() > "20160811" then
-            if SCREEN_RATIO > 1 then
-                adjust_u = (SCREEN_WIDTH / 1024) / math.ceil(SCREEN_RATIO)
-            else
-                adjust_u = (SCREEN_WIDTH / 1024) * 2
-            end
-
-            adjust_v = (SCREEN_HEIGHT / 512) / 2
-
-        else
-            if SCREEN_RATIO > 1 then
-                adjust_u = (SCREEN_WIDTH / 1024) / math.floor(SCREEN_RATIO)
-            else
-                adjust_u = (SCREEN_WIDTH / 1024) * 2
-            end
-
-            adjust_v = (SCREEN_HEIGHT / 512)
-        end
-    end
-
-    -- set quad and vertices
     local vertices = {}
 
-    local function add_quad(x1, y1, x2, y2)
-        vertices[#vertices + 1] = {
-            {SCREEN_WIDTH  * x1 / 8, SCREEN_HEIGHT * y1 / 6, 0},
-            {1,1,1,1},
-            {x1 / 8 * adjust_u, y1 / 6 * adjust_v}
-        }
+    local function build_vertices(texture_width, texture_height)
+        local adjust_u = 1
+        local adjust_v = 1
 
-        vertices[#vertices + 1] = {
-            {SCREEN_WIDTH  * x2 / 8, SCREEN_HEIGHT * y1 / 6, 0},
-            {1,1,1,1},
-            {x2 / 8 * adjust_u, y1 / 6 * adjust_v}
-        }
+        if load_song_bg or colorama_fix then
+            adjust_u = SCREEN_WIDTH / texture_width
+            adjust_v = SCREEN_HEIGHT / texture_height
+        end
 
-        vertices[#vertices + 1] = {
-            {SCREEN_WIDTH  * x2 / 8, SCREEN_HEIGHT * y2 / 6, 0},
-            {1,1,1,1},
-            {x2 / 8 * adjust_u, y2 / 6 * adjust_v}
-        }
+        local function add_quad(x1, y1, x2, y2)
+            vertices[#vertices + 1] = {
+                {SCREEN_WIDTH * x1 / 8, SCREEN_HEIGHT * y1 / 6, 0},
+                {1,1,1,1},
+                {x1 / 8 * adjust_u, y1 / 6 * adjust_v}
+            }
 
-        vertices[#vertices + 1] = {
-            {SCREEN_WIDTH  * x1 / 8, SCREEN_HEIGHT * y2 / 6, 0},
-            {1,1,1,1},
-            {x1 / 8 * adjust_u, y2 / 6 * adjust_v}
-        }
-    end
+            vertices[#vertices + 1] = {
+                {SCREEN_WIDTH * x2 / 8, SCREEN_HEIGHT * y1 / 6, 0},
+                {1,1,1,1},
+                {x2 / 8 * adjust_u, y1 / 6 * adjust_v}
+            }
 
-    for row = 0, 5 do
-        for col = 0, 7 do
-            add_quad(col, row, col + 1, row + 1)
+            vertices[#vertices + 1] = {
+                {SCREEN_WIDTH * x2 / 8, SCREEN_HEIGHT * y2 / 6, 0},
+                {1,1,1,1},
+                {x2 / 8 * adjust_u, y2 / 6 * adjust_v}
+            }
+
+            vertices[#vertices + 1] = {
+                {SCREEN_WIDTH * x1 / 8, SCREEN_HEIGHT * y2 / 6, 0},
+                {1,1,1,1},
+                {x1 / 8 * adjust_u, y2 / 6 * adjust_v}
+            }
+        end
+
+        for row = 0, 5 do
+            for col = 0, 7 do
+                add_quad(col, row, col + 1, row + 1)
+            end
         end
     end
 
@@ -958,7 +942,7 @@ if bgdistort_effect then
         Texture = first_texture.img,
 
         InitCommand = function(self)
-            self:SetDrawState{ Mode = "DrawMode_Quads" }
+            self:SetDrawState{Mode = "DrawMode_Quads"}
 
             if load_song_bg then
                 self:SetTexture(song_bg_tex:GetTexture())
@@ -968,6 +952,12 @@ if bgdistort_effect then
                 self:SetTexture(colorama_fix_tex:GetTexture())
                 self:SetTextureFiltering(set_texture_filtering)
             end
+
+            local texture_width = self:GetTexture():GetTextureWidth()
+            local texture_height = self:GetTexture():GetTextureHeight()
+            build_vertices(texture_width, texture_height)
+
+            self:SetVertices(vertices)
         end,
 
         OnCommand = function(self)
