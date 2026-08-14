@@ -24,7 +24,6 @@ local layer3 = {
     },
     fadelength = 4,
     properties = {
-        "fadelinear",
         "fadelinearinvert",
         "fadeout"
     }

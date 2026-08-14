@@ -17,7 +17,6 @@ local blackbg = {
     fadelength = 1,
     properties = {
         "blackbg",
-        "fadelinear",
         "fadelinearinvert",
     }
 }

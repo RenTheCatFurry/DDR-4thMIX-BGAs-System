@@ -26,7 +26,6 @@ local layer2 = {
     fadelength = 8,
     properties = {
         "mirror",
-        "fadelinear",
         "fadelinearinvert"
     }
 }
@@ -81,7 +80,6 @@ local layer5 = {
     },
     fadelength = 8,
     properties = {
-        "fadelinear",
         "fadelinearinvert",
         "fadeout"
     }
