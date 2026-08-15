@@ -12,7 +12,7 @@ local layer2 = {
         }
     },
     bgcrop = {5,1},
-    effect = "wagyout",
+    effect = "wagy",
     effectlength = 1
 }
 

@@ -16,7 +16,7 @@ local layer2 = {
             frames = {3}
         }
     },
-    effect = "pulseout",
+    effect = "pulse",
     effectlength = 2,
     coloranim = 5,
     blendmode = "Add"

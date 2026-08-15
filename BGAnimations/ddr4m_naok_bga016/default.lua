@@ -19,7 +19,7 @@ local layer2 = {
             delay = 1/15
         }
     },
-    effect = "wagyout",
+    effect = "wagy",
     effectlength = 8
 }
 

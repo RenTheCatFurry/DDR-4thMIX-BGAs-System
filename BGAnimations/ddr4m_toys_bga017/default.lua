@@ -22,8 +22,9 @@ local layer2 = {
             }
         }
     },
-    effect = "wagyin",
-    effectlength = 2
+    effect = "wagy",
+    effectlength = 2,
+    effectoffset = 0.5
 }
 
 return Def.ActorFrame{

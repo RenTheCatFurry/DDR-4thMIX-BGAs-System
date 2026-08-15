@@ -18,7 +18,7 @@ local layer2 = {
             frames = {8},
         }
     },
-    effect = "wagyout",
+    effect = "wagy",
     effectlength = 2
 }
 

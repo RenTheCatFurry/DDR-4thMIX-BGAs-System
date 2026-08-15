@@ -24,7 +24,7 @@ local layer2 = {
         }
     },
     blendmode = "Add",
-    effect = "wagyout",
+    effect = "wagy",
     effectlength = 8
 }
 

@@ -14,8 +14,9 @@ local layer2 = {
             frames = {0}
         }
     },
-    effect = "pulsein",
-    effectlength = 2
+    effect = "pulse",
+    effectlength = 2,
+    effectoffset = 0.5
 }
 
 local layer3 = {

@@ -16,7 +16,7 @@ local layer2 = {
             frames = {1}
         }
     },
-    effect = "pulsein",
+    effect = "pulse",
     effectlength = 1,
     effectoffset = -0.25,
     blendmode = "Add",

@@ -19,8 +19,9 @@ local layer2 = {
             delay = 1/15
         }
     },
-    effect = "wagxin",
-    effectlength = 2
+    effect = "wagx",
+    effectlength = 2,
+    effectoffset = 0.5
 }
 
 return Def.ActorFrame{

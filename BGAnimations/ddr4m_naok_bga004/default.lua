@@ -18,7 +18,7 @@ local layer2 = {
             }
         }
     },
-    effect = "wagxout",
+    effect = "wagx",
     effectlength = 2
 }
 

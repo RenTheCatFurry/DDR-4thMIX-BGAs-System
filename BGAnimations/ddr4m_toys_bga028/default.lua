@@ -18,7 +18,7 @@ local layer2 = {
         }
     },
     coloranim = 0,
-    effect = "wagyout",
+    effect = "wagy",
     effectlength = 8/3
 }
 

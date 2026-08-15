@@ -22,7 +22,7 @@ local layer2 = {
             }
         }
     },
-    effect = "pulseout",
+    effect = "pulse",
     effectlength = 2
 }
 

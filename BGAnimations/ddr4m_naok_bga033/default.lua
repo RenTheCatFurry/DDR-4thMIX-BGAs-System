@@ -16,7 +16,7 @@ local layer2 = {
         }
     },
     bgcrop = {1,4},
-    effect = "wagxout",
+    effect = "wagx",
     effectlength = 2
 }
 

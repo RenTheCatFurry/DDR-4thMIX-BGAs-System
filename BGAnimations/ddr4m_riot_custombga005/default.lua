@@ -20,7 +20,8 @@ local layer2 = {
             frames = {8}
         }
     },
-    effect = "pulsein"
+    effect = "pulse",
+    effectoffset = 0.5
 }
 
 return Def.ActorFrame{
