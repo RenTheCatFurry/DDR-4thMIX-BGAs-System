@@ -183,13 +183,9 @@ effect == "particlesout" or
 effect == "particlesbounceout" or
 effect == "particleslaserout" or
 effect == "particlesleft" or
-effect == "particlesleftspin" or
 effect == "particlesright" or
-effect == "particlesrightspin" or
 effect == "particlesup" or
-effect == "particlesupspin" or
-effect == "particlesdown" or
-effect == "particlesdownspin"
+effect == "particlesdown"
 then
     particles_effect = true
     align_center = true
@@ -292,13 +288,9 @@ end
 if particles_effect or spiral_effect then
     if
     effect ~= "particlesleft" or
-    effect ~= "particlesleftspin" or
     effect ~= "particlesright" or
-    effect ~= "particlesrightspin" or
     effect ~= "particlesup" or
-    effect ~= "particlesupspin" or
-    effect ~= "particlesdown" or
-    effect ~= "particlesdownspin"
+    effect ~= "particlesdown"
     then
         field_of_view = 166
     end
@@ -2362,16 +2354,21 @@ for i = 0, num_sprites - 1 do
                 self:y(SCREEN_HEIGHT / (mesh.rows * 2) * (1 + (math.floor(i / mesh.cols) * 2)) + add_margin("y"))
             end
 
-            -- random index
+            -- random values
             local random_index = 0
+            if num_sprites > 1 then random_index = math.random(0, num_sprites - 1) end
 
-            if num_sprites > 1 then
-                random_index = math.random(0, num_sprites - 1)
+            local random_angle = {}
+            if
+            (effect == "particlesleft" or
+            effect == "particlesright" or
+            effect == "particlesup" or
+            effect == "particlesdown") and spin_length
+            then
+                random_angle[i] = math.random(0, 360)
             end
 
-            -- random position
             local random_pos = {x = 0, y = 0}
-
             if particles_effect then
                 if
                 effect == "particlesin" or
@@ -2601,11 +2598,9 @@ for i = 0, num_sprites - 1 do
 
                         if
                         effect == "particlesup" or
-                        effect == "particlesupspin" or
-                        effect == "particlesdown" or
-                        effect == "particlesdownspin"
+                        effect == "particlesdown"
                         then
-                            if effect == "particlesup" or effect == "particlesupspin" then
+                            if effect == "particlesup" then
                                 speed = -SCREEN_HEIGHT / effect_length
                             else
                                 speed = SCREEN_HEIGHT / effect_length
@@ -2617,7 +2612,7 @@ for i = 0, num_sprites - 1 do
                             )
 
                         else
-                            if effect == "particlesleft" or effect == "particlesleftspin" then
+                            if effect == "particlesleft" then
                                 speed = -SCREEN_HEIGHT / effect_length
                             else
                                 speed = SCREEN_HEIGHT / effect_length
@@ -2650,57 +2645,29 @@ for i = 0, num_sprites - 1 do
                     end
 
                     -- rotation
-                    local rotation = 0
-
-                    if
-                    effect == "particlesin" or
-                    effect == "particlesrightspin" or
-                    effect == "particlesdownspin"
-                    then
-                        if effect == "particlesrightspin" or effect == "particlesdownspin" then
-                            rotation = ((360 * i / num_sprites) - (beat * 360 / (effect_length / 2))) % 360
-                        else
-                            rotation = -(beat * 360 / (effect_length)) % 360
-                        end
-
-                    elseif
-                    effect == "particlesout" or
-                    effect == "particlesleftspin" or
-                    effect == "particlesupspin"
-                    then
-                        if effect == "particlesleftspin" or effect == "particlesupspin" then
-                            rotation = ((360 * i / num_sprites) + (beat * 360 / (effect_length / 1.5))) % 360
-                        else
-                            rotation = (beat * 360 / (effect_length / 1.5)) % 360
-                        end
-                    end
-
                     if spin_length then
                         if
                         effect == "particlesin" or
-                        effect == "particlesdownspin" or
-                        effect == "particlesrightspin"
+                        effect == "particlesdown" or
+                        effect == "particlesright"
                         then
-                            if effect == "particlesdownspin" or effect == "particlesrightspin" then
-                                self:rotationz(((360 * i / num_sprites) - (beat * 360 / spin_length)) % 360)
+                            if effect == "particlesdown" or effect == "particlesright" then
+                                self:rotationz((random_angle[i] - (beat * 360 / spin_length)) % 360)
                             else
                                 self:rotationz(-((beat * (360 / spin_length)) % 360))
                             end
 
                         elseif
                         effect == "particlesout" or
-                        effect == "particlesupspin" or
-                        effect == "particlesleftspin"
+                        effect == "particlesup" or
+                        effect == "particlesleft"
                         then
-                            if effect == "particlesupspin" or effect == "particlesleftspin" then
-                                self:rotationz(((360 * i / num_sprites) + (beat * 360 / spin_length)) % 360)
+                            if effect == "particlesup" or effect == "particlesleft" then
+                                self:rotationz((random_angle[i] + (beat * 360 / spin_length)) % 360)
                             else
                                 self:rotationz((beat * (360 / spin_length)) % 360)
                             end
                         end
-
-                    else
-                        self:rotationz(rotation)
                     end
 
                     if effect == "particleslaserin" or effect == "particleslaserout" then
