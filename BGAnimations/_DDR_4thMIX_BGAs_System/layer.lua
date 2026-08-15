@@ -165,12 +165,9 @@ local bgdistort_effect = false
 local bgdoor_effect = false
 
 if
-effect == "wagxin" or
-effect == "wagxout" or
-effect == "wagyin" or
-effect == "wagyout" or
-effect == "pulsein" or
-effect == "pulseout"
+effect == "wagx" or
+effect == "wagy" or
+effect == "pulse"
 then
     wagpulse_effect = true
     align_center = true
@@ -2523,24 +2520,16 @@ for i = 0, num_sprites - 1 do
                     beat = beat * 360 / effect_length % 360
 
                     -- start angle
-                    local start_angle = 270
-                    
-                    if effect == "wagxout" or effect == "wagyout" or effect == "pulseout" then
-                        start_angle = 90
-                    end
-
-                    start_angle = start_angle + (360 * effect_offset)
+                    local start_angle = 90 + (360 * effect_offset)
 
                     -- animation
                     local beat_sin = 0.5 + math.sin(math.rad(start_angle + beat)) / 2
 
                     local function anim(v)
-                        if effect == "wagxin" or effect == "wagxout" then
+                        if effect == "wagx" then
                             self:zoomy(v)
-
-                        elseif effect == "wagyin" or effect == "wagyout" then
+                        elseif effect == "wagy" then
                             self:zoomx(v)
-
                         else
                             self:zoom(v)
                         end
