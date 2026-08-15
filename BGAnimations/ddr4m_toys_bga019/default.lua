@@ -22,7 +22,7 @@ local layer2 = {
             }
         }
     },
-    effect = "particlesdownspin",
+    effect = "particlesdown",
     effectlength = 3,
     spinlength = 2
 }

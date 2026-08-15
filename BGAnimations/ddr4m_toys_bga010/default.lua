@@ -6,7 +6,7 @@ local layer1 = {
             frames = {5}
         }
     },
-    effect = "particlesrightspin",
+    effect = "particlesright",
     effectlength = 4,
     spinlength = 4,
     blendmode = "Add",

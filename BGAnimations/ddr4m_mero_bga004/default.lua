@@ -17,7 +17,7 @@ local layer2 = {
             frames = {5}
         }
     },
-    effect = "particlesupspin",
+    effect = "particlesup",
     effectlength = 6,
     spinlength = 4
 }

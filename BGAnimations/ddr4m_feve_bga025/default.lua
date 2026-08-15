@@ -30,7 +30,7 @@ local layer2 = {
             frames = {4}
         }
     },
-    effect = "particlesdownspin",
+    effect = "particlesdown",
     effectlength = 3,
     spinlength = 2,
     blendmode = "Add",

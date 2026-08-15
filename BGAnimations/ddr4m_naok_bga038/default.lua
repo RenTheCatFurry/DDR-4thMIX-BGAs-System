@@ -14,7 +14,7 @@ local layer2 = {
         }
     },
     blendmode = "Add",
-    effect = "particlesupspin",
+    effect = "particlesup",
     effectlength = 2,
     spinlength = 2,
     alpha = 0.75

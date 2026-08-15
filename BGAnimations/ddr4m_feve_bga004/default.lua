@@ -28,7 +28,7 @@ local layer2 = {
             delay = 1/15
         }
     },
-    effect = "particlesdownspin",
+    effect = "particlesdown",
     effectlength = 12,
     spinlength = 8,
     blendmode = "Add",

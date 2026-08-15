@@ -20,7 +20,7 @@ local layer2 = {
             }
         }
     },
-    effect = "particlesdownspin",
+    effect = "particlesdown",
     effectlength = 6,
     spinlength = 4,
     coloranim = 2

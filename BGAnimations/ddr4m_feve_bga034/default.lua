@@ -22,6 +22,7 @@ local layer2 = {
     effect = "particlesin",
     effectlength = 4,
     effectstep = 1,
+    spinlength = 4,
     coloranim = 1
 }
 
