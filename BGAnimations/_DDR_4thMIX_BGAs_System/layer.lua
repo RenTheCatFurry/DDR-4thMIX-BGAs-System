@@ -163,6 +163,7 @@ local bgmirror_effect = false
 local bgwarp_effect = false
 local bgdistort_effect = false
 local bgdoor_effect = false
+local kaleidoscope2_effect = false
 
 if
 effect == "wagx" or
@@ -267,6 +268,11 @@ elseif effect == "bgdooropen" or effect == "bgdoorclose" then
     bgdoor_effect = true
     bg_mode = true
     num_sprites = 4
+
+elseif effect == "kaleidoscope2" then
+    kaleidoscope2_effect = true
+    bg_mode = true
+    num_sprites = 90
 end
 
 -- config mesh for static effects
@@ -817,13 +823,13 @@ local bgdistort_amv
 if bgdistort_effect then
     local vertices = {}
 
-    local function build_vertices(texture_width, texture_height)
+    local function build_vertices(tex_width, tex_height)
         local adjust_u = 1
         local adjust_v = 1
 
         if load_song_bg or colorama_fix then
-            adjust_u = SCREEN_WIDTH / texture_width
-            adjust_v = SCREEN_HEIGHT / texture_height
+            adjust_u = SCREEN_WIDTH / tex_width
+            adjust_v = SCREEN_HEIGHT / tex_height
         end
 
         local function add_quad(x1, y1, x2, y2)
@@ -942,9 +948,9 @@ if bgdistort_effect then
                 self:SetTextureFiltering(set_texture_filtering)
             end
 
-            local texture_width = self:GetTexture():GetTextureWidth()
-            local texture_height = self:GetTexture():GetTextureHeight()
-            build_vertices(texture_width, texture_height)
+            local tex_width = self:GetTexture():GetTextureWidth()
+            local tex_height = self:GetTexture():GetTextureHeight()
+            build_vertices(tex_width, tex_height)
 
             self:SetVertices(vertices)
         end,
@@ -1910,6 +1916,172 @@ if tilespin_effect then
     }
 end
 
+-- kaleidoscope 2
+local kaleidoscope2_amv
+
+if kaleidoscope2_effect then
+    local vertices = {}
+
+    local function build_vertices(tex_width, tex_height, beat)
+        -- Validación para evitar errores si la textura aún no ha cargado
+        if not tex_width or tex_width == 0 then tex_width = SCREEN_WIDTH end
+        if not tex_height or tex_height == 0 then tex_height = SCREEN_HEIGHT end
+
+        local adjust_u = 1
+        local adjust_v = 1
+
+        if load_song_bg or colorama_fix then
+            adjust_u = SCREEN_WIDTH / tex_width
+            adjust_v = SCREEN_HEIGHT / tex_height
+        end
+
+        -------------------------------------------------------------
+        -- 1. POSICIONES EN PANTALLA Y CENTRO DEL TRIÁNGULO
+        -------------------------------------------------------------
+        local function adjust_coord(coord)
+            return coord * (DDR_SCREEN_RATIO / SCREEN_RATIO)
+        end
+
+        local positions = {
+            {adjust_coord(-SCREEN_WIDTH/13.8), SCREEN_HEIGHT/6, 0},
+            {adjust_coord(SCREEN_WIDTH/13.8), SCREEN_HEIGHT/6, 0},
+            {0, 0, 0}
+        }
+
+        -- Baricentro (centro del triángulo) en pantalla
+        local tri_center_x = (positions[1][1] + positions[2][1] + positions[3][1]) / 3
+        local tri_center_y = (positions[1][2] + positions[2][2] + positions[3][2]) / 3
+
+        -------------------------------------------------------------
+        -- 2. ESCALA, OFFSET Y SESGADO (SKEW / SHEAR)
+        -------------------------------------------------------------
+        local scale_x = 0.5 / SCREEN_RATIO
+        local scale_y = 1
+
+        -- Desplazamiento de la textura
+        local offset_x = -0.1
+        local offset_y = -0.025
+
+        -------------------------------------------------------------
+        -- FACTORES DE SESGADO (SKEW)
+        -- Ajusta estos valores para inclinar la textura:
+        -- skew_x: inclina los bordes verticales hacia los lados
+        -- skew_y: inclina los bordes horizontales hacia arriba/abajo
+        -------------------------------------------------------------
+        local skew_x = 0.5  -- Prueba con valores como 0.1, -0.2, etc.
+        local skew_y = -0.25  -- Normalmente 0, pero útil si requiere inclinación vertical
+        --local skew_x = 0
+        --local skew_y = 0
+
+        local uv_base = {}
+        for i = 1, 3 do
+            -- Distancia relativa desde el centro del triángulo
+            local rel_x = (positions[i][1] - tri_center_x) / SCREEN_WIDTH
+            local rel_y = (positions[i][2] - tri_center_y) / SCREEN_HEIGHT
+            rel_x = -rel_x
+
+            -- Aplicamos el sesgado (Skew / Shear 2D)
+            local skewed_x = rel_x + (rel_y * skew_x)
+            local skewed_y = rel_y + (rel_x * skew_y)
+
+            -- Aplicamos escalas y offsets a U y V
+            local u = skewed_x * SCREEN_RATIO * scale_x * adjust_u + offset_x
+            local v = skewed_y * scale_y * adjust_v + offset_y
+
+            uv_base[i] = { u, v }
+        end
+
+        -------------------------------------------------------------
+        -- 3. ROTACIÓN SOBRE EL CENTRO DEL TRIÁNGULO
+        -------------------------------------------------------------
+        local effect_len = -effect_length * 16
+        
+        -- Le sumamos (-math.pi / 2) al ángulo para inclinar la textura 90°
+        local base_rotation = -math.pi / 3
+        local angle = base_rotation - ((beat or 0) / effect_len) * (math.pi * 2)
+        
+        local cos_a = math.cos(angle)
+        local sin_a = math.sin(angle)
+
+        -- Centro visual de la textura
+        local center_u = (adjust_u / 2)
+        local center_v = (adjust_v / 2)
+
+        vertices = {}
+        for i = 1, 3 do
+            local u = uv_base[i][1]
+            local v = uv_base[i][2]
+
+            -- Rotación 2D alrededor del centro
+            local rot_u = center_u + (u * cos_a - v * sin_a)
+            local rot_v = center_v + (u * sin_a + v * cos_a)
+
+            vertices[i] = {
+                positions[i],
+                {1, 1, 1, 1},
+                {rot_u, rot_v}
+            }
+        end
+    end
+
+    kaleidoscope2_amv = Def.ActorMultiVertex{
+        Texture = first_texture.img,
+
+        InitCommand = function(self)
+            self:SetDrawState{Mode = "DrawMode_Triangles"}
+        end,
+
+        OnCommand = function(self)
+            -- blend mode
+            self:blend(blend_mode)
+
+            -- rgb channels and alpha
+            if first_texture.rgb then
+                local rgb = first_texture.rgb
+                self:diffuse(rgb[1], rgb[2], rgb[3], alpha)
+            else
+                self:diffuse(1,1,1,alpha)
+            end
+
+            -- glow
+            if first_texture.glow then
+                local glow = first_texture.glow
+                self:glow(glow[1], glow[2], glow[3], glow[4])
+            end
+
+            -- Asignación de la textura cuando el AFT ya está inicializado
+            if load_song_bg and song_bg_tex then
+                self:SetTexture(song_bg_tex:GetTexture())
+                self:SetTextureFiltering(true)
+
+            elseif colorama_fix and colorama_fix_tex then
+                self:SetTexture(colorama_fix_tex:GetTexture())
+                self:SetTextureFiltering(set_texture_filtering or false)
+            end
+
+            local tex = self:GetTexture()
+            if tex then
+                local tex_width = tex:GetTextureWidth()
+                local tex_height = tex:GetTextureHeight()
+
+                build_vertices(tex_width, tex_height, 0)
+                self:SetVertices(vertices)
+            end
+        end,
+
+        BeatMessageCommand = function(self, params)
+            local tex = self:GetTexture()
+            if tex then
+                local tex_width = tex:GetTextureWidth()
+                local tex_height = tex:GetTextureHeight()
+
+                build_vertices(tex_width, tex_height, params.beat)
+                self:SetVertices(vertices)
+            end
+        end
+    }
+end
+
 -- layer
 local layer = Def.ActorFrame{
     song_bg_aft,
@@ -1927,6 +2099,9 @@ local layer = Def.ActorFrame{
         then
             self:zbuffer(true)
         end
+
+        -- config for kaleidoscope effects
+        self:zoomx(SCREEN_RATIO / DDR_SCREEN_RATIO)
 
         -- get beat where BGAnimation start
         local start_beat = GAMESTATE:GetSongPosition():GetSongBeat()
@@ -2086,6 +2261,9 @@ for i = 0, num_sprites - 1 do
 
         elseif bgdistort_effect then
             return bgdistort_amv
+
+        elseif kaleidoscope2_effect then
+            return kaleidoscope2_amv
 
         elseif black_bg then
             return Def.Quad{
@@ -2282,7 +2460,7 @@ for i = 0, num_sprites - 1 do
         },
 
         OnCommand = function(self)
-            -- initial position
+            -- adjust position if anchor point is in center or not
             local adjust_pos = {x = 0, y = 0}
             if align_center then
                 adjust_pos = {
@@ -2291,6 +2469,7 @@ for i = 0, num_sprites - 1 do
                 }
             end
 
+            -- adjust tile to center
             local adjust_tile = 0
             if adjust_tile_to_center and not stretch_x_res and not bg_mode and sprite_size.w <= 320 then
                 adjust_tile = (SCREEN_WIDTH - (sprite_size.w * mesh.cols)) / 2
@@ -2300,7 +2479,510 @@ for i = 0, num_sprites - 1 do
                 end
             end
 
-            if not tilespin_effect then
+            -- initial position by effect
+            if tilespin_effect then
+                self:x((SCREEN_WIDTH / 16) + (SCREEN_WIDTH / 8) * (i % 8))
+                self:y((SCREEN_HEIGHT / 12) + (SCREEN_HEIGHT / 6) * math.floor(i / 8))
+
+            elseif kaleidoscope2_effect then
+                if i == 0 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+
+                elseif i == 1 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 6)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 2 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 6)
+                    self:rotationz(240)
+
+                elseif i == 3 then
+                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+                
+                elseif i == 4 then
+                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 5 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+                
+                elseif i == 6 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+
+                elseif i == 7 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 8 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:rotationz(240)
+
+                elseif i == 9 then
+                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 10 then
+                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 11 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+                    
+                elseif i == 12 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 0)
+
+                elseif i == 13 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 14 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:rotationz(240)
+
+                elseif i == 15 then
+                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 16 then
+                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 17 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 0)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+
+                elseif i == 18 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+
+                elseif i == 19 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 20 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:rotationz(240)
+
+                elseif i == 21 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 0)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 22 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 6)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 23 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+
+                elseif i == 24 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+
+                elseif i == 25 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 26 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:rotationz(240)
+
+                elseif i == 27 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 28 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 29 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+                
+                elseif i == 30 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+
+                elseif i == 31 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 32 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:rotationz(240)
+
+                elseif i == 33 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 34 then
+                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 35 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+
+                elseif i == 36 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+
+                elseif i == 37 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 6)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 38 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 6)
+                    self:rotationz(240)
+
+                elseif i == 39 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+                
+                elseif i == 40 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 41 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+                
+                elseif i == 42 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+
+                elseif i == 43 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 44 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:rotationz(240)
+
+                elseif i == 45 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 46 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 47 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+                    
+                elseif i == 48 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 0)
+
+                elseif i == 49 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 50 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:rotationz(240)
+
+                elseif i == 51 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 52 then
+                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 53 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 0)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+
+                elseif i == 54 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+
+                elseif i == 55 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 56 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:rotationz(240)
+
+                elseif i == 57 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 0)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 58 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 6)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 59 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+
+                elseif i == 60 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+
+                elseif i == 61 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 62 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:rotationz(240)
+
+                elseif i == 63 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 64 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 65 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+                
+                elseif i == 66 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+
+                elseif i == 67 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 68 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:rotationz(240)
+
+                elseif i == 69 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 70 then
+                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 71 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+
+                elseif i == 72 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+
+                elseif i == 73 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 6)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 74 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 6)
+                    self:rotationz(240)
+
+                elseif i == 75 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+                
+                elseif i == 76 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 5)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 77 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+                
+                elseif i == 78 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+
+                elseif i == 79 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 80 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 4)
+                    self:rotationz(240)
+
+                elseif i == 81 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 82 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 3)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 83 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+                    
+                elseif i == 84 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 0)
+
+                elseif i == 85 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:rotationz(180)
+                    self:zoomx(-1)
+
+                elseif i == 86 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 2)
+                    self:rotationz(240)
+
+                elseif i == 87 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:zoomx(-1)
+                    self:rotationz(60)
+
+                elseif i == 88 then
+                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 1)
+                    self:zoomx(1)
+                    self:rotationz(120)
+
+                elseif i == 89 then
+                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
+                    self:y(SCREEN_HEIGHT / 6 * 0)
+                    self:zoomy(-1)
+                    self:rotationz(120)
+                end
+
+            -- default initial position
+            else
                 if set_mesh then
                     self:x(
                         (SCREEN_WIDTH / (mesh.cols * 2) ) + ((i % mesh.cols) * (SCREEN_WIDTH / mesh.cols))
@@ -2327,10 +3009,6 @@ for i = 0, num_sprites - 1 do
                     self:x(adjust_tile + adjust_pos.x + sprite_size.w * (i % mesh.cols))
                     self:y(adjust_pos.y + sprite_size.h * math.floor(i / mesh.cols))
                 end
-
-            else
-                self:x((SCREEN_WIDTH / 16) + (SCREEN_WIDTH / 8) * (i % 8))
-                self:y((SCREEN_HEIGHT / 12) + (SCREEN_HEIGHT / 6) * math.floor(i / 8))
             end
 
             -- mirror (for tilespin effect)
@@ -2973,15 +3651,19 @@ for i = 0, num_sprites - 1 do
                         self:y(beat * SCREEN_HEIGHT / 2)
                     end
 
+                elseif kaleidoscope2_effect then
+                    --SCREENMAN:SystemMessage("Effect \""..effect.."\" under construction")
+
                 else
                     if effect ~= "" then
                         if
                         not bgmirror_effect and
                         not tilespin_effect and
                         not bgwarp_effect and
-                        not bgdistort_effect
+                        not bgdistort_effect and
+                        not kaleidoscope2_effect
                         then
-                            SCREENMAN:SystemMessage("Effect \""..effect.."\" doesn't exist.")
+                            SCREENMAN:SystemMessage("Effect \""..effect.."\" doesn't exist")
                         end
                     end
                 end
