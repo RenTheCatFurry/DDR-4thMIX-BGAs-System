@@ -12,7 +12,11 @@ local layer2 = {
             img = "ligh/adc_ligh (stretch).png"
         }
     },
-    fadelength = 8
+    fadelength = 8,
+    properties = {
+        "fadelinear",
+        "fadeout"
+    }
 }
 
 return Def.ActorFrame{
