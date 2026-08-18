@@ -1,7 +1,7 @@
 local layer1 = {
     textures = {
         {
-            img = "ligh/adc_ligh (stretch).png"
+            img = "ligh/cdc_ligh (stretch).png"
         }
     }
 }
@@ -9,7 +9,7 @@ local layer1 = {
 local layer2 = {
     textures = {
         {
-            img = "ligh/cdc_ligh (stretch).png"
+            img = "ligh/adc_ligh (stretch).png"
         }
     },
     fadelength = 8
