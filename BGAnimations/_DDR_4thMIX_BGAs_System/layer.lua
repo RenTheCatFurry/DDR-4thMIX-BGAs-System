@@ -1892,9 +1892,11 @@ if kaleidoscope2_effect then
     -- FLYWEIGHT / MEMORIA ESTÁTICA
     -------------------------------------------------------------
     -- 1. Triángulo base (Posiciones físicas que jamás cambian)
+    local adjust_w = DDR_SCREEN_RATIO / SCREEN_RATIO
+
     local POSITIONS = {
-        {-SCREEN_WIDTH/13.75, SCREEN_HEIGHT/6, 0},
-        {SCREEN_WIDTH/13.75, SCREEN_HEIGHT/6, 0},
+        {-SCREEN_WIDTH / 13.75 * adjust_w, SCREEN_HEIGHT/6, 0},
+        {SCREEN_WIDTH / 13.75 * adjust_w, SCREEN_HEIGHT/6, 0},
         {0, 0, 0}
     }
 
@@ -1925,7 +1927,7 @@ if kaleidoscope2_effect then
         local skew_y = -0.25
 
         local effect_len = -effect_length * 16
-        local base_rotation = -math.pi / 3
+        local base_rotation = math.pi / 2
         local angle = base_rotation - ((beat or 0) / effect_len) * (math.pi * 2)
 
         local cos_a = math.cos(angle)
