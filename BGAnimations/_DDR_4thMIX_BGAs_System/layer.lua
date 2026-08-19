@@ -1887,8 +1887,6 @@ end
 -- kaleidoscope 2
 local kaleidoscope2_amv
 
-local kaleidoscope2_amv
-
 if kaleidoscope2_effect then
     -------------------------------------------------------------
     -- FLYWEIGHT / MEMORIA ESTÁTICA
@@ -2009,7 +2007,9 @@ local layer = Def.ActorFrame{
         end
 
         -- config for kaleidoscope effects
-        self:zoomx(SCREEN_RATIO / DDR_SCREEN_RATIO)
+        if kaleidoscope2_effect then
+            self:zoomx(SCREEN_RATIO / DDR_SCREEN_RATIO)
+        end
 
         -- get beat where BGAnimation start
         local start_beat = GAMESTATE:GetSongPosition():GetSongBeat()
