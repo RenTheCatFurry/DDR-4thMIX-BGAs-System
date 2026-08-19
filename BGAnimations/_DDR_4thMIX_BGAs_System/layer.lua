@@ -2,7 +2,7 @@ local p = ...
 
 -- global config
 local set_texture_filtering = true
-local adjust_tile_to_center = true
+local adj_x_to_center = true
 
 -- global functions
 local function has_property(prop, tex)
@@ -821,41 +821,51 @@ end
 local bgdistort_amv
 
 if bgdistort_effect then
+    -------------------------------------------------------------
+    -- FLYWEIGHT / MEMORIA ESTÁTICA Y LOOKUP TABLES
+    -------------------------------------------------------------
     local vertices = {}
+    
+    -- Mapeo optimizado de punteros directos a los vértices para la animación
+    local vertex_pointers = {}
 
-    local function build_vertices(tex_width, tex_height)
-        local adjust_u = 1
-        local adjust_v = 1
+    -- Malla estática de índices (extraída del código original)
+    local VERT_INDICES = {
+        {3,8,34,37},   {7,12,38,41},  {11,16,42,45}, {15,20,46,49}, {19,24,50,53}, {23,28,54,57}, {27,32,58,61},
+        {35,40,66,69}, {39,44,70,73}, {43,48,74,77}, {47,52,78,81}, {51,56,82,85}, {55,60,86,89}, {59,64,90,93},
+        {67,72,98,101},{71,76,102,105},{75,80,106,109},{79,84,110,113},{83,88,114,117},{87,92,118,121},{91,96,122,125},
+        {99,104,130,133},{103,108,134,137},{107,112,138,141},{111,116,142,145},{115,120,146,149},{119,124,150,153},{123,128,154,157},
+        {131,136,162,165},{135,140,166,169},{139,144,170,173},{143,148,174,177},{147,152,178,181},{151,156,182,185},{155,160,186,189}
+    }
 
-        if load_song_bg or colorama_fix then
-            adjust_u = SCREEN_WIDTH / tex_width
-            adjust_v = SCREEN_HEIGHT / tex_height
+    -- Valores aleatorios pregenerados (Flyweight)
+    local random_values = {}
+    for i = 1, 35 do
+        local values_per_vert = {}
+        for j = 1, 8 do
+            values_per_vert[j] = 0.5 - (math.random(0,100) / 100)
         end
+        random_values[i] = values_per_vert
+    end
+
+    -------------------------------------------------------------
+    -- INICIALIZACIÓN DE LA MALLA (1 Sola vez)
+    -------------------------------------------------------------
+    local function init_mesh(tex_width, tex_height)
+        if not tex_width or tex_width == 0 then tex_width = SCREEN_WIDTH end
+        if not tex_height or tex_height == 0 then tex_height = SCREEN_HEIGHT end
+
+        local adjust_u = (load_song_bg or colorama_fix) and (SCREEN_WIDTH / tex_width) or 1
+        local adjust_v = (load_song_bg or colorama_fix) and (SCREEN_HEIGHT / tex_height) or 1
+
+        vertices = {}
 
         local function add_quad(x1, y1, x2, y2)
-            vertices[#vertices + 1] = {
-                {SCREEN_WIDTH * x1 / 8, SCREEN_HEIGHT * y1 / 6, 0},
-                {1,1,1,1},
-                {x1 / 8 * adjust_u, y1 / 6 * adjust_v}
-            }
-
-            vertices[#vertices + 1] = {
-                {SCREEN_WIDTH * x2 / 8, SCREEN_HEIGHT * y1 / 6, 0},
-                {1,1,1,1},
-                {x2 / 8 * adjust_u, y1 / 6 * adjust_v}
-            }
-
-            vertices[#vertices + 1] = {
-                {SCREEN_WIDTH * x2 / 8, SCREEN_HEIGHT * y2 / 6, 0},
-                {1,1,1,1},
-                {x2 / 8 * adjust_u, y2 / 6 * adjust_v}
-            }
-
-            vertices[#vertices + 1] = {
-                {SCREEN_WIDTH * x1 / 8, SCREEN_HEIGHT * y2 / 6, 0},
-                {1,1,1,1},
-                {x1 / 8 * adjust_u, y2 / 6 * adjust_v}
-            }
+            local idx = #vertices
+            vertices[idx + 1] = { {SCREEN_WIDTH * x1 / 8, SCREEN_HEIGHT * y1 / 6, 0}, {1,1,1,1}, {x1 / 8 * adjust_u, y1 / 6 * adjust_v} }
+            vertices[idx + 2] = { {SCREEN_WIDTH * x2 / 8, SCREEN_HEIGHT * y1 / 6, 0}, {1,1,1,1}, {x2 / 8 * adjust_u, y1 / 6 * adjust_v} }
+            vertices[idx + 3] = { {SCREEN_WIDTH * x2 / 8, SCREEN_HEIGHT * y2 / 6, 0}, {1,1,1,1}, {x2 / 8 * adjust_u, y2 / 6 * adjust_v} }
+            vertices[idx + 4] = { {SCREEN_WIDTH * x1 / 8, SCREEN_HEIGHT * y2 / 6, 0}, {1,1,1,1}, {x1 / 8 * adjust_u, y2 / 6 * adjust_v} }
         end
 
         for row = 0, 5 do
@@ -863,50 +873,20 @@ if bgdistort_effect then
                 add_quad(col, row, col + 1, row + 1)
             end
         end
+
+        -- Crear tabla de punteros directos para acceso O(1) ultra rápido durante la animación
+        vertex_pointers = {}
+        for vert_idx = 1, #VERT_INDICES do
+            vertex_pointers[vert_idx] = {}
+            for _, i in ipairs(VERT_INDICES[vert_idx]) do
+                table.insert(vertex_pointers[vert_idx], vertices[i][1]) -- Guardamos la referencia de posición {x, y, z}
+            end
+        end
     end
 
-    local vert_indices = {
-        {3,8,34,37},
-        {7,12,38,41},
-        {11,16,42,45},
-        {15,20,46,49},
-        {19,24,50,53},
-        {23,28,54,57},
-        {27,32,58,61},
-
-        {35,40,66,69},
-        {39,44,70,73},
-        {43,48,74,77},
-        {47,52,78,81},
-        {51,56,82,85},
-        {55,60,86,89},
-        {59,64,90,93},
-
-        {67,72,98,101},
-        {71,76,102,105},
-        {75,80,106,109},
-        {79,84,110,113},
-        {83,88,114,117},
-        {87,92,118,121},
-        {91,96,122,125},
-
-        {99,104,130,133},
-        {103,108,134,137},
-        {107,112,138,141},
-        {111,116,142,145},
-        {115,120,146,149},
-        {119,124,150,153},
-        {123,128,154,157},
-
-        {131,136,162,165},
-        {135,140,166,169},
-        {139,144,170,173},
-        {143,148,174,177},
-        {147,152,178,181},
-        {151,156,182,185},
-        {155,160,186,189}
-    }
-
+    -------------------------------------------------------------
+    -- ANIMACIÓN MUTABLE ULTRA RÁPIDA
+    -------------------------------------------------------------
     local function anim_vertices(vert, x, y)
         local col = ((vert - 1) % 7) + 1
         local row = math.floor((vert - 1) / 7) + 1
@@ -914,22 +894,14 @@ if bgdistort_effect then
         local px = SCREEN_WIDTH / 8 * col + x
         local py = SCREEN_HEIGHT / 6 * row + y
 
-        for _, i in ipairs(vert_indices[vert]) do
-            vertices[i][1][1] = px
-            vertices[i][1][2] = py
+        -- Actualización directa sin bucles complejos ni re-indexación
+        local ptrs = vertex_pointers[vert]
+        if ptrs then
+            ptrs[1][1] = px; ptrs[1][2] = py
+            ptrs[2][1] = px; ptrs[2][2] = py
+            ptrs[3][1] = px; ptrs[3][2] = py
+            ptrs[4][1] = px; ptrs[4][2] = py
         end
-    end
-
-    -- random values (for bgdistort8)
-    local random_values = {}
-    for i = 1, 35 do
-        local values_per_vert = {}
-
-        for j = 1, 8 do
-            values_per_vert[j] = 0.5 - (math.random(0,100) / 100)
-        end
-
-        random_values[i] = values_per_vert
     end
 
     -- ActorMultiVertex for the background distort effects
@@ -938,28 +910,25 @@ if bgdistort_effect then
 
         InitCommand = function(self)
             self:SetDrawState{Mode = "DrawMode_Quads"}
-
-            if load_song_bg then
-                self:SetTexture(song_bg_tex:GetTexture())
-                self:SetTextureFiltering(true)
-
-            elseif colorama_fix then
-                self:SetTexture(colorama_fix_tex:GetTexture())
-                self:SetTextureFiltering(set_texture_filtering)
-            end
-
-            local tex_width = self:GetTexture():GetTextureWidth()
-            local tex_height = self:GetTexture():GetTextureHeight()
-            build_vertices(tex_width, tex_height)
-
-            self:SetVertices(vertices)
         end,
 
         OnCommand = function(self)
-            -- blend mode
-            self:blend(blend_mode)
+            if load_song_bg and song_bg_tex then
+                self:SetTexture(song_bg_tex:GetTexture())
+                self:SetTextureFiltering(true)
+            elseif colorama_fix and colorama_fix_tex then
+                self:SetTexture(colorama_fix_tex:GetTexture())
+                self:SetTextureFiltering(set_texture_filtering or false)
+            end
 
-            -- rgb channels and alpha
+            local tex = self:GetTexture()
+            if tex then
+                init_mesh(tex:GetTextureWidth(), tex:GetTextureHeight())
+                self:SetVertices(vertices)
+            end
+
+            -- Blend mode y colores
+            self:blend(blend_mode)
             if first_texture.rgb then
                 local rgb = first_texture.rgb
                 self:diffuse(rgb[1], rgb[2], rgb[3], alpha)
@@ -967,7 +936,6 @@ if bgdistort_effect then
                 self:diffuse(1,1,1,alpha)
             end
 
-            -- glow
             if first_texture.glow then
                 local glow = first_texture.glow
                 self:glow(glow[1], glow[2], glow[3], glow[4])
@@ -1919,108 +1887,73 @@ end
 -- kaleidoscope 2
 local kaleidoscope2_amv
 
-if kaleidoscope2_effect then
-    local vertices = {}
+local kaleidoscope2_amv
 
-    local function build_vertices(tex_width, tex_height, beat)
-        -- Validación para evitar errores si la textura aún no ha cargado
+if kaleidoscope2_effect then
+    -------------------------------------------------------------
+    -- FLYWEIGHT / MEMORIA ESTÁTICA
+    -------------------------------------------------------------
+    -- 1. Triángulo base (Posiciones físicas que jamás cambian)
+    local POSITIONS = {
+        {-SCREEN_WIDTH/13.75, SCREEN_HEIGHT/6, 0},
+        {SCREEN_WIDTH/13.75, SCREEN_HEIGHT/6, 0},
+        {0, 0, 0}
+    }
+
+    -- 2. Baricentro precalculado (evita divisiones continuas)
+    local TRI_CENTER_X = (POSITIONS[1][1] + POSITIONS[2][1] + POSITIONS[3][1]) / 3
+    local TRI_CENTER_Y = (POSITIONS[1][2] + POSITIONS[2][2] + POSITIONS[3][2]) / 3
+
+    -- 3. Tabla única reutilizable (Pool de vértices)
+    -- Asignamos la memoria una sola vez al cargar el archivo
+    local vertices = {
+        { POSITIONS[1], {1, 1, 1, 1}, {0, 0} },
+        { POSITIONS[2], {1, 1, 1, 1}, {0, 0} },
+        { POSITIONS[3], {1, 1, 1, 1}, {0, 0} }
+    }
+
+    local function update_vertices(tex_width, tex_height, beat)
         if not tex_width or tex_width == 0 then tex_width = SCREEN_WIDTH end
         if not tex_height or tex_height == 0 then tex_height = SCREEN_HEIGHT end
 
-        local adjust_u = 1
-        local adjust_v = 1
+        local adjust_u = (load_song_bg or colorama_fix) and (SCREEN_WIDTH / tex_width) or 1
+        local adjust_v = (load_song_bg or colorama_fix) and (SCREEN_HEIGHT / tex_height) or 1
 
-        if load_song_bg or colorama_fix then
-            adjust_u = SCREEN_WIDTH / tex_width
-            adjust_v = SCREEN_HEIGHT / tex_height
-        end
-
-        -------------------------------------------------------------
-        -- 1. POSICIONES EN PANTALLA Y CENTRO DEL TRIÁNGULO
-        -------------------------------------------------------------
-        local function adjust_coord(coord)
-            return coord * (DDR_SCREEN_RATIO / SCREEN_RATIO)
-        end
-
-        local positions = {
-            {adjust_coord(-SCREEN_WIDTH/13.8), SCREEN_HEIGHT/6, 0},
-            {adjust_coord(SCREEN_WIDTH/13.8), SCREEN_HEIGHT/6, 0},
-            {0, 0, 0}
-        }
-
-        -- Baricentro (centro del triángulo) en pantalla
-        local tri_center_x = (positions[1][1] + positions[2][1] + positions[3][1]) / 3
-        local tri_center_y = (positions[1][2] + positions[2][2] + positions[3][2]) / 3
-
-        -------------------------------------------------------------
-        -- 2. ESCALA, OFFSET Y SESGADO (SKEW / SHEAR)
-        -------------------------------------------------------------
         local scale_x = 0.5 / SCREEN_RATIO
         local scale_y = 1
-
-        -- Desplazamiento de la textura
         local offset_x = -0.1
         local offset_y = -0.025
+        local skew_x = 0.5
+        local skew_y = -0.25
 
-        -------------------------------------------------------------
-        -- FACTORES DE SESGADO (SKEW)
-        -- Ajusta estos valores para inclinar la textura:
-        -- skew_x: inclina los bordes verticales hacia los lados
-        -- skew_y: inclina los bordes horizontales hacia arriba/abajo
-        -------------------------------------------------------------
-        local skew_x = 0.5  -- Prueba con valores como 0.1, -0.2, etc.
-        local skew_y = -0.25  -- Normalmente 0, pero útil si requiere inclinación vertical
-        --local skew_x = 0
-        --local skew_y = 0
-
-        local uv_base = {}
-        for i = 1, 3 do
-            -- Distancia relativa desde el centro del triángulo
-            local rel_x = (positions[i][1] - tri_center_x) / SCREEN_WIDTH
-            local rel_y = (positions[i][2] - tri_center_y) / SCREEN_HEIGHT
-            rel_x = -rel_x
-
-            -- Aplicamos el sesgado (Skew / Shear 2D)
-            local skewed_x = rel_x + (rel_y * skew_x)
-            local skewed_y = rel_y + (rel_x * skew_y)
-
-            -- Aplicamos escalas y offsets a U y V
-            local u = skewed_x * SCREEN_RATIO * scale_x * adjust_u + offset_x
-            local v = skewed_y * scale_y * adjust_v + offset_y
-
-            uv_base[i] = { u, v }
-        end
-
-        -------------------------------------------------------------
-        -- 3. ROTACIÓN SOBRE EL CENTRO DEL TRIÁNGULO
-        -------------------------------------------------------------
         local effect_len = -effect_length * 16
-        
-        -- Le sumamos (-math.pi / 2) al ángulo para inclinar la textura 90°
         local base_rotation = -math.pi / 3
         local angle = base_rotation - ((beat or 0) / effect_len) * (math.pi * 2)
-        
+
         local cos_a = math.cos(angle)
         local sin_a = math.sin(angle)
 
-        -- Centro visual de la textura
-        local center_u = (adjust_u / 2)
-        local center_v = (adjust_v / 2)
+        local center_u = adjust_u * 0.5
+        local center_v = adjust_v * 0.5
 
-        vertices = {}
+        -- ACTUALIZACIÓN MUTABLE (Sin crear nuevas tablas)
         for i = 1, 3 do
-            local u = uv_base[i][1]
-            local v = uv_base[i][2]
+            local rel_x = -((POSITIONS[i][1] - TRI_CENTER_X) / SCREEN_WIDTH)
+            local rel_y = (POSITIONS[i][2] - TRI_CENTER_Y) / SCREEN_HEIGHT
 
-            -- Rotación 2D alrededor del centro
+            local skewed_x = rel_x + (rel_y * skew_x)
+            local skewed_y = rel_y + (rel_x * skew_y)
+
+            local u = skewed_x * SCREEN_RATIO * scale_x * adjust_u + offset_x
+            local v = skewed_y * scale_y * adjust_v + offset_y
+
+            -- Modificamos los valores directamente en el array ya existente
             local rot_u = center_u + (u * cos_a - v * sin_a)
             local rot_v = center_v + (u * sin_a + v * cos_a)
 
-            vertices[i] = {
-                positions[i],
-                {1, 1, 1, 1},
-                {rot_u, rot_v}
-            }
+            -- Inyección directa en la coordenada UV (sub-índice 3)
+            vertices[i][3][1] = rot_u
+            vertices[i][3][2] = rot_v
         end
     end
 
@@ -2032,28 +1965,9 @@ if kaleidoscope2_effect then
         end,
 
         OnCommand = function(self)
-            -- blend mode
-            self:blend(blend_mode)
-
-            -- rgb channels and alpha
-            if first_texture.rgb then
-                local rgb = first_texture.rgb
-                self:diffuse(rgb[1], rgb[2], rgb[3], alpha)
-            else
-                self:diffuse(1,1,1,alpha)
-            end
-
-            -- glow
-            if first_texture.glow then
-                local glow = first_texture.glow
-                self:glow(glow[1], glow[2], glow[3], glow[4])
-            end
-
-            -- Asignación de la textura cuando el AFT ya está inicializado
             if load_song_bg and song_bg_tex then
                 self:SetTexture(song_bg_tex:GetTexture())
                 self:SetTextureFiltering(true)
-
             elseif colorama_fix and colorama_fix_tex then
                 self:SetTexture(colorama_fix_tex:GetTexture())
                 self:SetTextureFiltering(set_texture_filtering or false)
@@ -2061,10 +1975,7 @@ if kaleidoscope2_effect then
 
             local tex = self:GetTexture()
             if tex then
-                local tex_width = tex:GetTextureWidth()
-                local tex_height = tex:GetTextureHeight()
-
-                build_vertices(tex_width, tex_height, 0)
+                update_vertices(tex:GetTextureWidth(), tex:GetTextureHeight(), 0)
                 self:SetVertices(vertices)
             end
         end,
@@ -2072,10 +1983,7 @@ if kaleidoscope2_effect then
         BeatMessageCommand = function(self, params)
             local tex = self:GetTexture()
             if tex then
-                local tex_width = tex:GetTextureWidth()
-                local tex_height = tex:GetTextureHeight()
-
-                build_vertices(tex_width, tex_height, params.beat)
+                update_vertices(tex:GetTextureWidth(), tex:GetTextureHeight(), params.beat)
                 self:SetVertices(vertices)
             end
         end
@@ -2204,107 +2112,762 @@ local layer = Def.ActorFrame{
 }
 
 -- add sprites to layer
+-------------------------------------------------------------
+-- 1. LOOKUP TABLE (LUT) DE POSICIONES DEL CALEIDOSCOPIO
+-- Precalculamos los 90 valores fuera del bucle (Flyweight)
+-------------------------------------------------------------
+local KALEIDOSCOPE_TRANSFORMS = {}
+
+if kaleidoscope2_effect then
+    local factor = DDR_SCREEN_RATIO / SCREEN_RATIO
+    local sw7 = SCREEN_WIDTH / 7
+    local sh6 = SCREEN_HEIGHT / 6
+
+    -- Matriz de datos puros [i] = { x_mult, y_mult, rotz, zoomx, zoomy }
+    -- Nota: Si zoomx o zoomy es nil, se asume 1 por defecto.
+    local DATA = {
+        [0]  = {6, 4, 0},            [1]  = {6, 6, 180, -1},     [2]  = {6, 6, 240},
+        [3]  = {7.5, 5, 60, -1},     [4]  = {7.5, 5, 120, 1},    [5]  = {6, 4, 120, 1, -1},
+        [6]  = {6, 2, 0},            [7]  = {6, 4, 180, -1},     [8]  = {6, 4, 240},
+        [9]  = {7.5, 3, 60, -1},     [10] = {7.5, 3, 120, 1},    [11] = {6, 2, 120, 1, -1},
+        [12] = {6, 0, 0},            [13] = {6, 2, 180, -1},     [14] = {6, 2, 240},
+        [15] = {7.5, 1, 60, -1},     [16] = {7.5, 1, 120, 1},    [17] = {6, 0, 120, 1, -1},
+
+        [18] = {4.5, 5, 0},          [19] = {4.5, 1, 180, -1},   [20] = {4.5, 1, 240},
+        [21] = {6, 0, 60, -1},       [22] = {6, 6, 120, 1},      [23] = {4.5, 5, 120, 1, -1},
+        [24] = {4.5, 3, 0},          [25] = {4.5, 5, 180, -1},   [26] = {4.5, 5, 240},
+        [27] = {6, 4, 60, -1},       [28] = {6, 4, 120, 1},      [29] = {4.5, 3, 120, 1, -1},
+        [30] = {4.5, 1, 0},          [31] = {4.5, 3, 180, -1},   [32] = {4.5, 3, 240},
+        [33] = {6, 2, 60, -1},       [34] = {6, 2, 120, 1},      [35] = {4.5, 1, 120, 1, -1},
+
+        [36] = {3, 4, 0},            [37] = {3, 6, 180, -1},     [38] = {3, 6, 240},
+        [39] = {4.5, 5, 60, -1},     [40] = {4.5, 5, 120, 1},    [41] = {3, 4, 120, 1, -1},
+        [42] = {3, 2, 0},            [43] = {3, 4, 180, -1},     [44] = {3, 4, 240},
+        [45] = {4.5, 3, 60, -1},     [46] = {4.5, 3, 120, 1},    [47] = {3, 2, 120, 1, -1},
+        [48] = {3, 0, 0},            [49] = {3, 2, 180, -1},     [50] = {3, 2, 240},
+        [51] = {4.5, 1, 60, -1},     [52] = {4.5, 1, 120, 1},    [53] = {3, 0, 120, 1, -1},
+
+        [54] = {1.5, 5, 0},          [55] = {1.5, 1, 180, -1},   [56] = {1.5, 1, 240},
+        [57] = {3, 0, 60, -1},       [58] = {3, 6, 120, 1},      [59] = {1.5, 5, 120, 1, -1},
+        [60] = {1.5, 3, 0},          [61] = {1.5, 5, 180, -1},   [62] = {1.5, 5, 240},
+        [63] = {3, 4, 60, -1},       [64] = {3, 4, 120, 1},      [65] = {1.5, 3, 120, 1, -1},
+        [66] = {1.5, 1, 0},          [67] = {1.5, 3, 180, -1},   [68] = {1.5, 3, 240},
+        [69] = {3, 2, 60, -1},       [70] = {3, 2, 120, 1},      [71] = {1.5, 1, 120, 1, -1},
+
+        [72] = {0, 4, 0},            [73] = {0, 6, 180, -1},     [74] = {0, 6, 240},
+        [75] = {1.5, 5, 60, -1},     [76] = {1.5, 5, 120, 1},    [77] = {0, 4, 120, 1, -1},
+        [78] = {0, 2, 0},            [79] = {0, 4, 180, -1},     [80] = {0, 4, 240},
+        [81] = {1.5, 3, 60, -1},     [82] = {1.5, 3, 120, 1},    [83] = {0, 2, 120, 1, -1},
+        [84] = {0, 0, 0},            [85] = {0, 2, 180, -1},     [86] = {0, 2, 240},
+        [87] = {1.5, 1, 60, -1},     [88] = {1.5, 1, 120, 1},    [89] = {0, 0, 120, 1, -1}
+    }
+
+    -- Generamos las funciones de transformación dinámicamente al cargar el script
+    for idx, d in pairs(DATA) do
+        KALEIDOSCOPE_TRANSFORMS[idx] = function(actor)
+            actor:x(sw7 * d[1] * factor):y(sh6 * d[2])
+            if d[3] and d[3] ~= 0 then actor:rotationz(d[3]) end
+            if d[4] then actor:zoomx(d[4]) end
+            if d[5] then actor:zoomy(d[5]) end
+        end
+    end
+end
+
+-------------------------------------------------------------
+-- 2. UPDATE FUNCTION ESTÁTICA Y ÚNICA
+-- Cero asignación de funciones en memoria durante ejecución
+-------------------------------------------------------------
+local function shared_sprite_update(self)
+    local i = self.i
+    local random_index = self.random_index
+    local random_angle = self.random_angle
+    local random_pos = self.random_pos
+    local calc_margin = self.calc_margin
+    local adj_x = self.adj_x
+
+    local song_position = GAMESTATE:GetSongPosition()
+    local beat = song_position:GetSongBeat() - self.start_beat
+
+    if self.effect_step and not self.scroll_active then
+        beat = math.floor(beat / self.effect_step)
+    end
+
+    ---------------------------------------------------------
+    -- Aquí va toda la lógica de tus 40+ efectos.
+    -- Tip: Usa `self.i` para saber cuál sprite se está animando.
+    ---------------------------------------------------------
+    -- scroll effect
+    if scroll_active then
+        local limit = {
+            x = mesh.cols * sprite_size.w,
+            y = mesh.rows * sprite_size.h
+        }
+
+        local speed = {
+            x = (beat * sprite_size.w / scroll_length) % (sprite_size.w * mesh.cols),
+            y = (beat * sprite_size.h / scroll_length) % (sprite_size.h * mesh.rows)
+        }
+
+        local anim = {
+            x = (i % mesh.cols) * sprite_size.w,
+            y = math.floor(i / mesh.cols) * sprite_size.h
+        }
+
+        -- movement as step
+        if effect_step then
+            speed.x = math.floor(beat / effect_step) * sprite_size.w / scroll_length * effect_step
+            speed.y = math.floor(beat / effect_step) * sprite_size.h / scroll_length * effect_step
+        end
+
+        -- pingpong loop
+        if effect_pingpong then
+            speed.x = math.abs(-sprite_size.w + (sprite_size.w + speed.x) % (sprite_size.w * 2))
+            speed.y = math.abs(-sprite_size.h + (sprite_size.h + speed.y) % (sprite_size.h * 2))
+        end
+
+        -- animation
+        if scroll_dir == 1 then
+            anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) - speed.x) % limit.x
+            anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) - speed.y) % limit.y
+        
+        elseif scroll_dir == 2 then
+            anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) - speed.y) % limit.y
+        
+        elseif scroll_dir == 3 then
+            anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) + speed.x) % limit.x
+            anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) - speed.y) % limit.y
+
+        elseif scroll_dir == 4 then
+            anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) + speed.x) % limit.x
+
+        elseif scroll_dir == 5 then
+            anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) + speed.x) % limit.x
+            anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) + speed.y) % limit.y
+
+        elseif scroll_dir == 6 then
+            anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) + speed.y) % limit.y
+
+        elseif scroll_dir == 7 then
+            anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) - speed.x) % limit.x
+            anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) + speed.y) % limit.y
+
+        elseif scroll_dir == 8 then
+            anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) - speed.x) % limit.x
+        end
+
+        if scroll_bg_crop then
+            -- vertical scroll
+            if scroll_dir == 2 then
+                self:x(SCREEN_CENTER_X)
+                self:y((SCREEN_HEIGHT * 2 / 3) - ((beat / scroll_length * 3) % 1) * (SCREEN_HEIGHT / 3))
+
+            elseif scroll_dir == 6 then
+                self:x(SCREEN_CENTER_X)
+                self:y((SCREEN_HEIGHT * 1 / 3) + ((beat / scroll_length * 3) % 1) * (SCREEN_HEIGHT / 3))
+
+            -- horizontal scroll
+            elseif scroll_dir == 4 then
+                self:x(
+                    (SCREEN_CENTER_X - SCREEN_WIDTH / 8) + 
+                    (((beat / scroll_length) % (1 / 4)) * (SCREEN_WIDTH))
+                )
+                self:y(SCREEN_CENTER_Y)
+            else
+
+                self:x(
+                    (SCREEN_CENTER_X + SCREEN_WIDTH / 8) -
+                    (((beat / scroll_length) % (1 / 4)) * (SCREEN_WIDTH))
+                )
+                self:y(SCREEN_CENTER_Y)
+            end
+
+        else
+            local adj_x_scroll = 0
+
+            if adj_x_to_center then
+                local num_cols = mesh.cols
+
+                if add_more_cols then
+                    num_cols = mesh.cols - 1
+                end
+
+                adj_x_scroll = (SCREEN_WIDTH - (sprite_size.w * num_cols)) / 2
+
+                self:x(adj_x_scroll + anim.x + sprite_size.w / 2)
+
+            else
+                self:x(anim.x)
+            end
+
+            self:y(anim.y)
+        end
+    end
+
+    -- wag pulse effect
+    if wagpulse_effect then
+        beat = beat * 360 / effect_length % 360
+
+        -- start angle
+        local start_angle = 90 + (360 * effect_offset)
+
+        -- animation
+        local beat_sin = 0.5 + math.sin(math.rad(start_angle + beat)) / 2
+
+        local function anim(v)
+            if effect == "wagx" then
+                self:zoomy(v)
+            elseif effect == "wagy" then
+                self:zoomx(v)
+            else
+                self:zoom(v)
+            end
+        end
+
+        anim(beat_sin)
+
+    -- particles effect
+    elseif particles_effect then
+        if
+        effect == "particlesin" or
+        effect == "particlesbouncein" or
+        effect == "particleslaserin" or
+        effect == "particlesout" or
+        effect == "particlesbounceout" or
+        effect == "particleslaserout"
+        then
+            self:zoom(1.5)
+            local separator = 1000 / num_sprites
+            local length = beat * ( (1000 / 3) / (effect_length / 4) )
+
+            -- position x and y
+            self:x(random_pos.x)
+            if effect == "particlesbouncein" or effect == "particlesbounceout" then
+                local anim = SCREEN_HEIGHT - math.sin(
+                    math.rad((
+                        (beat * (4 / effect_length)) + (random_index / num_sprites)
+                    ) * (180 + i * (90 / num_sprites)) % 180
+                )) * SCREEN_HEIGHT
+
+                self:y(anim)
+
+            else
+                self:y(random_pos.y)
+            end
+
+            -- position z
+            local anim_z
+            if
+            effect == "particlesin" or
+            effect == "particlesbouncein" or
+            effect == "particleslaserin"
+            then
+                anim_z = -1000 + ((i * separator) + length) % 1000
+            else
+                anim_z = -1000 + ((i * separator) - length) % 1000
+            end
+            self:z(anim_z)
+
+        else
+            local expand = (i / num_sprites) + 1
+            local speed
+
+            self:zoom(0.25 + ((i + 1) / num_sprites / 1.5))
+
+            if
+            effect == "particlesup" or
+            effect == "particlesdown"
+            then
+                if effect == "particlesup" then
+                    speed = -SCREEN_HEIGHT / effect_length
+                else
+                    speed = SCREEN_HEIGHT / effect_length
+                end
+
+                self:x(random_pos.x)
+                self:y(-(sprite_size.h / 2) + 
+                    (((beat * speed) + random_pos.y) % SCREEN_HEIGHT) * (1.25 * expand)
+                )
+
+            else
+                if effect == "particlesleft" then
+                    speed = -SCREEN_HEIGHT / effect_length
+                else
+                    speed = SCREEN_HEIGHT / effect_length
+                end
+
+                self:x(-(sprite_size.w / 2) + 
+                    (((beat * speed) + random_pos.x) % SCREEN_WIDTH) * (1.25 * expand)
+                )
+                self:y(random_pos.y)
+            end
+        end
+
+        -- depth opacity
+        if depth_opacity then
+            local opacity_value
+            if
+            effect == "particlesin" or
+            effect == "particlesbouncein" or
+            effect == "particleslaserin" or
+            effect == "particlesout" or
+            effect == "particlesbounceout" or
+            effect == "particleslaserout"
+            then
+                opacity_value = (1000 + self:GetZ()) / 1000
+            else
+                opacity_value = 0.25 + (i / num_sprites / 1.5)
+            end
+
+            self:diffuse(opacity_value, opacity_value, opacity_value, 1)
+        end
+
+        -- rotation
+        if spin_length then
+            if
+            effect == "particlesin" or
+            effect == "particlesdown" or
+            effect == "particlesright"
+            then
+                if effect == "particlesdown" or effect == "particlesright" then
+                    self:rotationz((random_angle[i] - (beat * 360 / spin_length)) % 360)
+                else
+                    self:rotationz(-((beat * (360 / spin_length)) % 360))
+                end
+
+            elseif
+            effect == "particlesout" or
+            effect == "particlesup" or
+            effect == "particlesleft"
+            then
+                if effect == "particlesup" or effect == "particlesleft" then
+                    self:rotationz((random_angle[i] + (beat * 360 / spin_length)) % 360)
+                else
+                    self:rotationz((beat * (360 / spin_length)) % 360)
+                end
+            end
+        end
+
+        if effect == "particleslaserin" or effect == "particleslaserout" then
+            self:rotationx(-90)
+        end
+
+    -- snail effect
+    elseif snail_effect then
+        local function generate_snail_order(cols, rows)
+            local snail_x = {}
+            local snail_y = {}
+
+            -- bordes del "rectángulo" actual
+            local left   = 0
+            local right  = cols - 1
+            local top    = 0
+            local bottom = rows - 1
+
+            local index = 1
+
+            while left <= right and top <= bottom do
+                
+                -- 1) mover derecha
+                for x = left, right do
+                    snail_x[index] = x
+                    snail_y[index] = top
+                    index = index + 1
+                end
+                top = top + 1
+                if top > bottom then break end
+
+                -- 2) mover abajo
+                for y = top, bottom do
+                    snail_x[index] = right
+                    snail_y[index] = y
+                    index = index + 1
+                end
+                right = right - 1
+                if left > right then break end
+
+                -- 3) mover izquierda
+                for x = right, left, -1 do
+                    snail_x[index] = x
+                    snail_y[index] = bottom
+                    index = index + 1
+                end
+                bottom = bottom - 1
+                if top > bottom then break end
+
+                -- 4) mover arriba
+                for y = bottom, top, -1 do
+                    snail_x[index] = left
+                    snail_y[index] = y
+                    index = index + 1
+                end
+                left = left + 1
+            end
+
+            return snail_x, snail_y
+        end
+
+        -- x and y position
+        local snail_x_coord, snail_y_coord = generate_snail_order(mesh.cols, mesh.rows)
+
+        if effect == "snailinreverse" or effect == "snailoutreverse" then
+            self:x(adj_x + (snail_x_coord[#snail_x_coord - i] * sprite_size.w))
+            self:y(snail_y_coord[#snail_y_coord - i] * sprite_size.h)
+        else
+            self:x(adj_x + (snail_x_coord[i + 1] * sprite_size.w))
+            self:y(snail_y_coord[i + 1] * sprite_size.h)
+        end
+
+        -- diffuse alpha anim
+        local alpha_anim
+
+        if effect == "snailin" or effect == "snailinreverse" then
+            alpha_anim = math.abs(
+                math.floor((((beat + effect_offset) / effect_length) + (num_sprites - (i / num_sprites))) % 2) - 1
+            )
+        else
+            alpha_anim = math.floor(
+                (((beat + effect_offset) / effect_length) + (num_sprites - (i / num_sprites))) % 2
+            )
+        end
+
+        self:diffusealpha(alpha_anim)
+
+    -- spiral effects
+    elseif spiral_effect then
+        -- Z movement
+        local separator = 1000 / num_sprites
+        local speed = beat * 1000 / effect_length
+
+        if effect == "spiral2in" or effect == "spiral2out" then
+            speed = beat * 1000 / 6
+        elseif effect == "vortexin" or effect == "vortexout" then
+            speed = beat * 1000 / 5
+        end
+
+        local anim_z
+        if effect == "spiral1in" or effect == "spiral2in" or effect == "vortexin" then
+            anim_z = -1000 + ((i * separator) + speed) % 1000
+        else
+            anim_z = -1000 + ((i * separator) - speed) % 1000
+        end
+
+        self:z(anim_z)
+
+        local function expand(start, increase)
+            return start + ((1000 + self:GetZ()) / 1000) * increase
+        end
+
+        -- spiral 1
+        if effect == "spiral1in" or effect == "spiral1out" then
+            -- X and Y position
+            self:x(SCREEN_CENTER_X + SCREEN_CENTER_X * expand(0.5, 0.75) * math.sin(math.rad(
+                i * (360 / num_sprites)
+            )))
+            self:y(SCREEN_CENTER_Y + SCREEN_CENTER_X * expand(0.5, 0.75) * math.cos(math.rad(
+                i * (360 / num_sprites)
+            )))
+
+            -- rotation
+            local rotation
+            if effect == "spiral1in" then
+                rotation = -(beat * 360 / effect_length) % 360
+            else
+                rotation = (beat * 360 / effect_length) % 360
+            end
+
+            -- set parameters
+            self:zoom(1.25)
+            self:rotationz(rotation)
+
+        -- spiral 2
+        elseif effect == "spiral2in" or effect == "spiral2out" then
+            local function set_coords_a_and_b(start, finish)
+                local anim = (1000 + self:GetZ()) / 1000
+                return start + anim * (finish - start)
+            end
+
+            self:x(
+                set_coords_a_and_b(
+                    SCREEN_CENTER_X + SCREEN_CENTER_X * math.sin(math.rad(-i * 60)),
+                    SCREEN_CENTER_X + SCREEN_CENTER_X * math.sin(math.rad(-(i + 1) * 60))
+                )
+            )
+            self:y(
+                set_coords_a_and_b(
+                    SCREEN_CENTER_Y + SCREEN_CENTER_X * math.cos(math.rad(-i * 60)),
+                    SCREEN_CENTER_Y + SCREEN_CENTER_X * math.cos(math.rad(-(i + 1) * 60))
+                )
+            )
+
+            self:rotationz(-60 * (i + 1) % 360)
+
+        -- vortex
+        else
+            SCREENMAN:SystemMessage("Effect \""..effect.."\" under construction")
+        end
+
+    -- explode effects
+    elseif explode_effect then
+        -- beat config
+        beat = (beat / effect_length) % 1
+        beat = (beat + effect_offset) % 1
+
+        if effect_half then
+            beat = beat / 2
+        end
+
+        if effect == "explodeout" or effect == "explodeoutspin" then
+            if effect_half then
+                beat = 0.5 - beat
+            else
+                beat = 1 - beat
+            end
+        end
+
+        if effect_pingpong then
+            if effect == "explodein" or effect == "explodeinspin" then
+                if effect_half then
+                    beat = 0.25 - math.abs(-0.25 + beat)
+                else
+                    beat = 0.5 - math.abs(-0.5 + beat)
+                end
+
+            else
+                if effect_half then
+                    beat = math.abs(-0.25 + beat)
+                else
+                    beat = math.abs(-0.5 + beat)
+                end
+            end
+        end
+
+        -- movement calc
+        local mov_x = beat * calc_margin(i, "x", mesh, sprite_size) * (SCREEN_WIDTH / sprite_size.w) * (2 - (2 / mesh.cols))
+        local mov_y = beat * calc_margin(i, "y", mesh, sprite_size) * (SCREEN_HEIGHT / sprite_size.h) * (2 - (2 / mesh.rows))
+
+        if mesh.cols % 2 == 1 then
+            mov_x = beat * calc_margin(i, "x", mesh, sprite_size) * (SCREEN_WIDTH / sprite_size.w) * 2
+        end
+
+        if mesh.rows % 2 == 1 then
+            mov_y = beat * calc_margin(i, "y", mesh, sprite_size) * (SCREEN_HEIGHT / sprite_size.h) * 2
+        end
+
+        -- rotation calc
+        local rotation = 0
+        if effect == "explodeinspin" or effect == "explodeoutspin" then
+            rotation = (-i * (360 / 14)) - (beat * 360 * 4)
+        end
+
+        -- animations
+        self:x(SCREEN_CENTER_X + mov_x * (mesh.cols * 2))
+        self:y(SCREEN_CENTER_Y + mov_y * (mesh.rows * 2) * (mesh.cols / mesh.rows))
+        self:rotationz(rotation)
+
+    -- misc effects
+    elseif misc_effect then
+        -- DVD bounce effect
+        if effect == "dvdbounce" then
+            if effect_half then
+                beat = beat + 4
+            end
+
+            local limit = {
+                x = SCREEN_WIDTH - sprite_size.w,
+                y = SCREEN_HEIGHT - sprite_size.h
+            }
+
+            local init_pos = {
+                x = (
+                    (SCREEN_WIDTH - sprite_size.w * 1.5)
+                    - ((SCREEN_WIDTH - sprite_size.w * 1.5) - (SCREEN_WIDTH / ((num_sprites - 1) / 1.5)))
+                    / (num_sprites - 1) * 2 * ((i - 1) % ((num_sprites - 1) / 2))
+                ) / 2,
+                y = (
+                    ((SCREEN_HEIGHT / ((num_sprites - 1) / 2))
+                    + ((SCREEN_HEIGHT - (sprite_size.h * 1.25)) - (SCREEN_HEIGHT / ((num_sprites - 1) / 2)))
+                    / (num_sprites - 1) * i)
+                ) / 3
+            }
+
+            local speed = {
+                x = (beat / effect_length * 2.75) * (1 + (i / num_sprites) / 1.3),
+                y = (beat / effect_length * 2.75) * (1.15 + (1 - (i / num_sprites)))
+            }
+            if sprite_size.w >= SCREEN_WIDTH / 2 then
+                speed.y = speed.y * num_sprites / 2
+            end
+
+            local anim = {
+                x = math.abs(-limit.x + (init_pos.x - speed.x * sprite_size.w) % limit.x * 2),
+                y = math.abs(-limit.y + (init_pos.y - speed.y * sprite_size.h) % limit.y * 2)
+            }
+            if sprite_size.w >= SCREEN_WIDTH then anim.x = 0 end
+
+            self:x(anim.x)
+            self:y(anim.y)
+
+        -- scroll X and Y effect
+        elseif effect == "scrollxy" then
+            local length = effect_length / 2
+
+            beat = (-0.5 + length + ((beat + num_sprites) / ((i / num_sprites) + 1))) % length
+
+            if i % 2 == 0 then
+                self:x(-sprite_size.w / 2 + (sprite_size.w * i / 2))
+
+                if math.floor(i / 2) % 2 == 0 then
+                    self:y(-sprite_size.h + (SCREEN_HEIGHT + sprite_size.h) * beat / length)
+                else
+                    self:y(SCREEN_HEIGHT - (SCREEN_HEIGHT + sprite_size.h) * beat / length)
+                end
+
+            else
+                self:y((-sprite_size.h / 1.5) + (sprite_size.h * i / 2.5))
+
+                if math.floor(i / 2) % 2 == 0 then
+                    self:x(-sprite_size.w + (SCREEN_WIDTH + sprite_size.w) * beat / length)
+                else
+                    self:x(SCREEN_WIDTH - (SCREEN_WIDTH + sprite_size.w) * beat / length)
+                end
+            end
+        end
+
+    -- background door effects
+    elseif bgdoor_effect then
+        beat = (beat / effect_length) % 1
+
+        if effect == "bgdoorclose" then
+            beat = 1 - beat
+        end
+
+        if i == 0 then
+            self:x(-beat * SCREEN_WIDTH / 2)
+            self:y(-beat * SCREEN_HEIGHT / 2)
+        end
+
+        if i == 1 then
+            self:x(beat * SCREEN_WIDTH / 2)
+            self:y(-beat * SCREEN_HEIGHT / 2)
+        end
+
+        if i == 2 then
+            self:x(-beat * SCREEN_WIDTH / 2)
+            self:y(beat * SCREEN_HEIGHT / 2)
+        end
+
+        if i == 3 then
+            self:x(beat * SCREEN_WIDTH / 2)
+            self:y(beat * SCREEN_HEIGHT / 2)
+        end
+
+    elseif kaleidoscope2_effect then
+        --SCREENMAN:SystemMessage("Effect \""..effect.."\" under construction")
+
+    else
+        if effect ~= "" then
+            if
+            not bgmirror_effect and
+            not tilespin_effect and
+            not bgwarp_effect and
+            not bgdistort_effect and
+            not kaleidoscope2_effect
+            then
+                SCREENMAN:SystemMessage("Effect \""..effect.."\" doesn't exist")
+            end
+        end
+    end
+end
+
+-------------------------------------------------------------
+-- 3. CÁLCULO DE MARGENES OPTIMIZADO (Sin closures internos)
+-------------------------------------------------------------
+local function calc_margin(i, axis, mesh, sprite_size)
+    local is_y = (axis == "y")
+    local dir = is_y and mesh.rows or mesh.cols
+    local separator = is_y and (sprite_size.h / mesh.rows / 2) 
+                      or ((sprite_size.w / mesh.cols / 2) * (SCREEN_WIDTH / (SCREEN_HEIGHT * 4 / 3)))
+    local iterator = is_y and math.floor(i / mesh.cols) or i
+    local startPoint = -math.floor(dir / 2)
+
+    if dir % 2 == 0 then
+        return ((startPoint + ((iterator % dir) * (dir / (dir - 1)))) * separator)
+    else
+        return ((startPoint + (iterator % dir)) * separator)
+    end
+end
+
+-------------------------------------------------------------
+-- 4. BUCLE PRINCIPAL "ADD SPRITES TO LAYER"
+-------------------------------------------------------------
 for i = 0, num_sprites - 1 do
     local tex_iterator = i % num_textures
 
-    -- intercalate sprites in scroll
     if num_textures == 2 and scroll_active and not scroll_intercalate then
         if math.floor(i / mesh.cols) % 2 == 1 then
             tex_iterator = (i + 1) % num_textures
         end
     end
 
-    local tex = p.textures[(tex_iterator) + 1]
+    local tex = p.textures[tex_iterator + 1]
 
-    -- object to load
-    local function obj_to_load()
-        if tilespin_effect then
-            return Def.Sprite{
-                OnCommand = function(self)
-                    self:SetTexture(tilespin_tex:GetTexture())
-                    self:blend(blend_mode)
-                end
-            }
+    -- Fabrica de objetos ligada al tipo de efecto
+    local inner_obj
+    if tilespin_effect then
+        inner_obj = Def.Sprite{
+            OnCommand = function(self)
+                self:SetTexture(tilespin_tex:GetTexture())
+                self:blend(blend_mode)
+            end
+        }
+    elseif scroll_bg_crop then
+        inner_obj = Def.Sprite{
+            OnCommand = function(self)
+                self:SetTexture(scroll_bg_crop_tex:GetTexture())
+                self:blend(blend_mode)
 
-        elseif scroll_bg_crop then
-            return Def.Sprite{
-                OnCommand = function(self)
-                    self:SetTexture(scroll_bg_crop_tex:GetTexture())
-                    self:blend(blend_mode)
-
-                    if scroll_dir == 2 or scroll_dir == 6 then
-                        self:cropright((3 - (i % 4)) / 4)
-                        self:cropleft((i % 4) / 4)
-
-                        if scroll_dir == 6 then
-                            self:cropbottom((3 - math.floor(i / 4)) / 4)
-                            self:croptop(math.floor(i / 4) / 4)
-                        else
-                            self:croptop((3 - math.floor(i / 4)) / 4)
-                            self:cropbottom(math.floor(i / 4) / 4)
-                        end
-
+                local col = i % 4
+                local row = math.floor(i / 4)
+                if scroll_dir == 2 or scroll_dir == 6 then
+                    self:cropright((3 - col) / 4):cropleft(col / 4)
+                    if scroll_dir == 6 then
+                        self:cropbottom((3 - row) / 4):croptop(row / 4)
                     else
-                        if scroll_dir == 8 then
-                            self:cropleft((4 - (i % 5)) / 5)
-                            self:cropright((i % 5) / 5)
-                        else
-                            self:cropright((4 - (i % 5)) / 5)
-                            self:cropleft((i % 5) / 5)
-                        end
-
-                        self:croptop((2 - math.floor(i / 5)) / 3)
-                        self:cropbottom(math.floor(i / 5) / 3)
+                        self:croptop((3 - row) / 4):cropbottom(row / 4)
                     end
+                else
+                    col = i % 5
+                    row = math.floor(i / 5)
+                    if scroll_dir == 8 then
+                        self:cropleft((4 - col) / 5):cropright(col / 5)
+                    else
+                        self:cropright((4 - col) / 5):cropleft(col / 5)
+                    end
+                    self:croptop((2 - row) / 3):cropbottom(row / 3)
                 end
-            }
-
-        elseif bgdistort_effect then
-            return bgdistort_amv
-
-        elseif kaleidoscope2_effect then
-            return kaleidoscope2_amv
-
-        elseif black_bg then
-            return Def.Quad{
-                OnCommand = function(self)
-                    self:Center()
-                    self:zoomto(SCREEN_WIDTH, SCREEN_HEIGHT)
-                    self:diffuse(0,0,0,alpha)
-                end
-            }
-
-        else
-            return load_sprite(i, tex)
-        end
+            end
+        }
+    elseif bgdistort_effect then
+        inner_obj = bgdistort_amv
+    elseif kaleidoscope2_effect then
+        inner_obj = kaleidoscope2_amv
+    elseif black_bg then
+        inner_obj = Def.Quad{
+            OnCommand = function(self)
+                self:Center():zoomto(SCREEN_WIDTH, SCREEN_HEIGHT):diffuse(0,0,0,alpha)
+            end
+        }
+    else
+        inner_obj = load_sprite(i, tex)
     end
 
-    -- add margin to coords
-    local function add_margin(axis)
-        local dir = mesh.cols
-        local separator = (sprite_size.w / mesh.cols / 2) * (SCREEN_WIDTH / (SCREEN_HEIGHT * 4 / 3))
-        local iterator = i
-
-        if axis == "y" then
-            dir = mesh.rows
-            separator = sprite_size.h / mesh.rows / 2
-            iterator = math.floor(i / mesh.cols)
-        end
-
-        local startPoint = -math.floor(dir / 2)
-
-        if dir % 2 == 0 then
-            return ((startPoint + ((iterator % dir) * (dir / (dir - 1)))) * separator)
-        else
-            return ((startPoint + (iterator % dir)) * separator)
-        end
-    end
-
+    -- Inserción directa en la capa
     layer[#layer + 1] = Def.ActorFrame{
         Def.ActorFrame{
-            obj_to_load(),
+            inner_obj,
 
-            OnCommand = function(self, params)
+            -- RGB channel animations
+            OnCommand = function(self)
                 if color_anim then
                     -- get beat where BGAnimation start
                     local start_beat = GAMESTATE:GetSongPosition():GetSongBeat()
@@ -2451,6 +3014,11 @@ for i = 0, num_sprites - 1 do
                             r = color_values({0, 160, 90})
                             g = color_values({0, 255, 160})
                             b = color_values({255, 0, 79})
+
+                        elseif color_anim == 11 then
+                            r = color_values({0, 0, 255, 255})
+                            g = color_values({128, 128, 255, 255})
+                            b = 0
                         end
 
                         if r and g and b then self:diffuse(r,g,b,1) end
@@ -2460,23 +3028,23 @@ for i = 0, num_sprites - 1 do
         },
 
         OnCommand = function(self)
-            -- adjust position if anchor point is in center or not
-            local adjust_pos = {x = 0, y = 0}
-            if align_center then
-                adjust_pos = {
-                    x = sprite_size.w / 2,
-                    y = sprite_size.h / 2
-                }
-            end
+            -- Asignación de variables al Actor para usarlas en el update estático
+            self.i = i
+            self.start_beat = GAMESTATE:GetSongPosition():GetSongBeat()
+            self.effect_step = effect_step
+            self.scroll_active = scroll_active
 
+            ---------------------------------------------------------
+            -- POSICIONAMIENTO INICIAL (Sin crear tablas basura)
+            ---------------------------------------------------------
             -- adjust tile to center
-            local adjust_tile = 0
-            if adjust_tile_to_center and not stretch_x_res and not bg_mode and sprite_size.w <= 320 then
-                adjust_tile = (SCREEN_WIDTH - (sprite_size.w * mesh.cols)) / 2
+            local adj_x = align_center and (sprite_size.w / 2) or 0
+            local adj_y = align_center and (sprite_size.h / 2) or 0
 
-                if add_more_cols then
-                    adjust_tile = adjust_tile + (sprite_size.w / 2)
-                end
+            if adj_x_to_center and not stretch_x_res and not bg_mode and sprite_size.w <= 320 then
+                local tile_offset = (SCREEN_WIDTH - (sprite_size.w * mesh.cols)) / 2
+                if add_more_cols then tile_offset = tile_offset + (sprite_size.w / 2) end
+                adj_x = adj_x + tile_offset
             end
 
             -- initial position by effect
@@ -2484,549 +3052,34 @@ for i = 0, num_sprites - 1 do
                 self:x((SCREEN_WIDTH / 16) + (SCREEN_WIDTH / 8) * (i % 8))
                 self:y((SCREEN_HEIGHT / 12) + (SCREEN_HEIGHT / 6) * math.floor(i / 8))
 
+                local is_odd_row = math.floor(i / 8) % 2 == 1
+                local is_odd_col = i % 2 == 1
+                if (is_odd_row and not is_odd_col) or (not is_odd_row and is_odd_col) then
+                    self:zoomx(-1)
+                end
+
             elseif kaleidoscope2_effect then
-                if i == 0 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
+                -- Búsqueda rápida O(1) en la tabla de transformaciones
+                local transform = KALEIDOSCOPE_TRANSFORMS[i]
+                if transform then transform(self) end
+
+            elseif set_mesh or bg_crop_x then
+                local cols = mesh.cols
+                local rows = mesh.rows
+                self:x((SCREEN_WIDTH / (cols * 2)) + ((i % cols) * (SCREEN_WIDTH / cols)))
+                self:y((SCREEN_HEIGHT / (rows * 2)) + (math.floor(i / cols) * (SCREEN_HEIGHT / rows)))
+
+            elseif bgmirror_effect or bgwarp_effect or bgdoor_effect then
+                self:x(0):y(0)
 
-                elseif i == 1 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 6)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 2 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 6)
-                    self:rotationz(240)
-
-                elseif i == 3 then
-                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-                
-                elseif i == 4 then
-                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 5 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-                
-                elseif i == 6 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-
-                elseif i == 7 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 8 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:rotationz(240)
-
-                elseif i == 9 then
-                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 10 then
-                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 11 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-                    
-                elseif i == 12 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 0)
-
-                elseif i == 13 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 14 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:rotationz(240)
-
-                elseif i == 15 then
-                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 16 then
-                    self:x(SCREEN_WIDTH / 7 * 7.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 17 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 0)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-
-                elseif i == 18 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-
-                elseif i == 19 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 20 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:rotationz(240)
-
-                elseif i == 21 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 0)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 22 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 6)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 23 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-
-                elseif i == 24 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-
-                elseif i == 25 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 26 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:rotationz(240)
-
-                elseif i == 27 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 28 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 29 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-                
-                elseif i == 30 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-
-                elseif i == 31 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 32 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:rotationz(240)
-
-                elseif i == 33 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 34 then
-                    self:x(SCREEN_WIDTH / 7 * 6 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 35 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-
-                elseif i == 36 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-
-                elseif i == 37 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 6)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 38 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 6)
-                    self:rotationz(240)
-
-                elseif i == 39 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-                
-                elseif i == 40 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 41 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-                
-                elseif i == 42 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-
-                elseif i == 43 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 44 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:rotationz(240)
-
-                elseif i == 45 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 46 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 47 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-                    
-                elseif i == 48 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 0)
-
-                elseif i == 49 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 50 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:rotationz(240)
-
-                elseif i == 51 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 52 then
-                    self:x(SCREEN_WIDTH / 7 * 4.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 53 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 0)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-
-                elseif i == 54 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-
-                elseif i == 55 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 56 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:rotationz(240)
-
-                elseif i == 57 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 0)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 58 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 6)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 59 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-
-                elseif i == 60 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-
-                elseif i == 61 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 62 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:rotationz(240)
-
-                elseif i == 63 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 64 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 65 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-                
-                elseif i == 66 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-
-                elseif i == 67 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 68 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:rotationz(240)
-
-                elseif i == 69 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 70 then
-                    self:x(SCREEN_WIDTH / 7 * 3 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 71 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-
-                elseif i == 72 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-
-                elseif i == 73 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 6)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 74 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 6)
-                    self:rotationz(240)
-
-                elseif i == 75 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-                
-                elseif i == 76 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 5)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 77 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-                
-                elseif i == 78 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-
-                elseif i == 79 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 80 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 4)
-                    self:rotationz(240)
-
-                elseif i == 81 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 82 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 3)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 83 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-                    
-                elseif i == 84 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 0)
-
-                elseif i == 85 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:rotationz(180)
-                    self:zoomx(-1)
-
-                elseif i == 86 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 2)
-                    self:rotationz(240)
-
-                elseif i == 87 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:zoomx(-1)
-                    self:rotationz(60)
-
-                elseif i == 88 then
-                    self:x(SCREEN_WIDTH / 7 * 1.5 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 1)
-                    self:zoomx(1)
-                    self:rotationz(120)
-
-                elseif i == 89 then
-                    self:x(SCREEN_WIDTH / 7 * 0 * (DDR_SCREEN_RATIO / SCREEN_RATIO))
-                    self:y(SCREEN_HEIGHT / 6 * 0)
-                    self:zoomy(-1)
-                    self:rotationz(120)
-                end
-
-            -- default initial position
             else
-                if set_mesh then
-                    self:x(
-                        (SCREEN_WIDTH / (mesh.cols * 2) ) + ((i % mesh.cols) * (SCREEN_WIDTH / mesh.cols))
-                    )
-                    self:y(
-                        (SCREEN_HEIGHT / (mesh.rows * 2) ) + (math.floor(i / mesh.cols) * (SCREEN_HEIGHT / mesh.rows))
-                    )
-
-                elseif bgmirror_effect or bgwarp_effect then
-                    self:x(0)
-                    self:y(0)
-
-                elseif bg_crop_x then
-                    self:x(
-                        (SCREEN_WIDTH / (mesh.cols * 2)) + 
-                        ((SCREEN_WIDTH / mesh.cols) * (i % mesh.cols))
-                    )
-                    self:y(
-                        (SCREEN_HEIGHT / (mesh.rows * 2)) + 
-                        ((SCREEN_HEIGHT / mesh.rows) * math.floor(i / mesh.cols))
-                    )
-
-                else
-                    self:x(adjust_tile + adjust_pos.x + sprite_size.w * (i % mesh.cols))
-                    self:y(adjust_pos.y + sprite_size.h * math.floor(i / mesh.cols))
-                end
-            end
-
-            -- mirror (for tilespin effect)
-            if tilespin_effect then
-                local condition = i % 2 == 1
-
-                if math.floor(i / 8) % 2 == 1 then
-                    condition = i % 2 == 0
-                end
-
-                if condition then
-                    self:zoomx(-1)
-                end
+                self:x(adj_x + sprite_size.w * (i % mesh.cols))
+                self:y(adj_y + sprite_size.h * math.floor(i / mesh.cols))
             end
 
             if margin then
-                self:x(SCREEN_WIDTH / (mesh.cols * 2) * (1 + (i % mesh.cols * 2)) + add_margin("x"))
-                self:y(SCREEN_HEIGHT / (mesh.rows * 2) * (1 + (math.floor(i / mesh.cols) * 2)) + add_margin("y"))
+                self:x(adj_x + sprite_size.w * (i % mesh.cols) + calc_margin(i, "x", mesh, sprite_size))
+                self:y(adj_y + sprite_size.h * math.floor(i / mesh.cols) + calc_margin(i, "y", mesh, sprite_size))
             end
 
             -- random values
@@ -3067,607 +3120,13 @@ for i = 0, num_sprites - 1 do
                 end
             end
 
-            -- all sprites in the same position
-            if bgdoor_effect then
-                self:x(0)
-                self:y(0)
-            end
-
-            -- get beat where BGAnimation start
-            local start_beat = GAMESTATE:GetSongPosition():GetSongBeat()
-
-            -- dynamic effects
-            self:SetUpdateFunction(function(self)
-                local song_position = GAMESTATE:GetSongPosition()
-                local beat = song_position:GetSongBeat()
-                beat = beat - start_beat
-
-                if effect_step and not scroll_active then
-                    beat = math.floor(beat / effect_step)
-                end
-
-                -- scroll effect
-                if scroll_active then
-                    local limit = {
-                        x = mesh.cols * sprite_size.w,
-                        y = mesh.rows * sprite_size.h
-                    }
-
-                    local speed = {
-                        x = (beat * sprite_size.w / scroll_length) % (sprite_size.w * mesh.cols),
-                        y = (beat * sprite_size.h / scroll_length) % (sprite_size.h * mesh.rows)
-                    }
-
-                    local anim = {
-                        x = (i % mesh.cols) * sprite_size.w,
-                        y = math.floor(i / mesh.cols) * sprite_size.h
-                    }
-
-                    -- movement as step
-                    if effect_step then
-                        speed.x = math.floor(beat / effect_step) * sprite_size.w / scroll_length * effect_step
-                        speed.y = math.floor(beat / effect_step) * sprite_size.h / scroll_length * effect_step
-                    end
-
-                    -- pingpong loop
-                    if effect_pingpong then
-                        speed.x = math.abs(-sprite_size.w + (sprite_size.w + speed.x) % (sprite_size.w * 2))
-                        speed.y = math.abs(-sprite_size.h + (sprite_size.h + speed.y) % (sprite_size.h * 2))
-                    end
-
-                    -- animation
-                    if scroll_dir == 1 then
-                        anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) - speed.x) % limit.x
-                        anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) - speed.y) % limit.y
-                    
-                    elseif scroll_dir == 2 then
-                        anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) - speed.y) % limit.y
-                    
-                    elseif scroll_dir == 3 then
-                        anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) + speed.x) % limit.x
-                        anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) - speed.y) % limit.y
-
-                    elseif scroll_dir == 4 then
-                        anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) + speed.x) % limit.x
-
-                    elseif scroll_dir == 5 then
-                        anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) + speed.x) % limit.x
-                        anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) + speed.y) % limit.y
-
-                    elseif scroll_dir == 6 then
-                        anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) + speed.y) % limit.y
-
-                    elseif scroll_dir == 7 then
-                        anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) - speed.x) % limit.x
-                        anim.y = -sprite_size.h + ((math.floor(i / mesh.cols) * sprite_size.h) + speed.y) % limit.y
-
-                    elseif scroll_dir == 8 then
-                        anim.x = -sprite_size.w + (((i % mesh.cols) * sprite_size.w) - speed.x) % limit.x
-                    end
-
-                    if scroll_bg_crop then
-                        -- vertical scroll
-                        if scroll_dir == 2 then
-                            self:x(SCREEN_CENTER_X)
-                            self:y((SCREEN_HEIGHT * 2 / 3) - ((beat / scroll_length * 3) % 1) * (SCREEN_HEIGHT / 3))
-
-                        elseif scroll_dir == 6 then
-                            self:x(SCREEN_CENTER_X)
-                            self:y((SCREEN_HEIGHT * 1 / 3) + ((beat / scroll_length * 3) % 1) * (SCREEN_HEIGHT / 3))
-
-                        -- horizontal scroll
-                        elseif scroll_dir == 4 then
-                            self:x(
-                                (SCREEN_CENTER_X - SCREEN_WIDTH / 8) + 
-                                (((beat / scroll_length) % (1 / 4)) * (SCREEN_WIDTH))
-                            )
-                            self:y(SCREEN_CENTER_Y)
-                        else
-
-                            self:x(
-                                (SCREEN_CENTER_X + SCREEN_WIDTH / 8) -
-                                (((beat / scroll_length) % (1 / 4)) * (SCREEN_WIDTH))
-                            )
-                            self:y(SCREEN_CENTER_Y)
-                        end
-
-                    else
-                        local adjust_tile_scroll = 0
-
-                        if adjust_tile_to_center then
-                            local num_cols = mesh.cols
-
-                            if add_more_cols then
-                                num_cols = mesh.cols - 1
-                            end
-
-                            adjust_tile_scroll = (SCREEN_WIDTH - (sprite_size.w * num_cols)) / 2
-
-                            self:x(adjust_tile_scroll + anim.x + sprite_size.w / 2)
-
-                        else
-                            self:x(anim.x)
-                        end
-
-                        self:y(anim.y)
-                    end
-                end
-
-                -- wag pulse effect
-                if wagpulse_effect then
-                    beat = beat * 360 / effect_length % 360
-
-                    -- start angle
-                    local start_angle = 90 + (360 * effect_offset)
-
-                    -- animation
-                    local beat_sin = 0.5 + math.sin(math.rad(start_angle + beat)) / 2
-
-                    local function anim(v)
-                        if effect == "wagx" then
-                            self:zoomy(v)
-                        elseif effect == "wagy" then
-                            self:zoomx(v)
-                        else
-                            self:zoom(v)
-                        end
-                    end
-
-                    anim(beat_sin)
-
-                -- particles effect
-                elseif particles_effect then
-                    if
-                    effect == "particlesin" or
-                    effect == "particlesbouncein" or
-                    effect == "particleslaserin" or
-                    effect == "particlesout" or
-                    effect == "particlesbounceout" or
-                    effect == "particleslaserout"
-                    then
-                        self:zoom(1.5)
-                        local separator = 1000 / num_sprites
-                        local length = beat * ( (1000 / 3) / (effect_length / 4) )
-
-                        -- position x and y
-                        self:x(random_pos.x)
-                        if effect == "particlesbouncein" or effect == "particlesbounceout" then
-                            local anim = SCREEN_HEIGHT - math.sin(
-                                math.rad((
-                                    (beat * (4 / effect_length)) + (random_index / num_sprites)
-                                ) * (180 + i * (90 / num_sprites)) % 180
-                            )) * SCREEN_HEIGHT
-
-                            self:y(anim)
-
-                        else
-                            self:y(random_pos.y)
-                        end
-
-                        -- position z
-                        local anim_z
-                        if
-                        effect == "particlesin" or
-                        effect == "particlesbouncein" or
-                        effect == "particleslaserin"
-                        then
-                            anim_z = -1000 + ((i * separator) + length) % 1000
-                        else
-                            anim_z = -1000 + ((i * separator) - length) % 1000
-                        end
-                        self:z(anim_z)
-
-                    else
-                        local expand = (i / num_sprites) + 1
-                        local speed
-
-                        self:zoom(0.25 + ((i + 1) / num_sprites / 1.5))
-
-                        if
-                        effect == "particlesup" or
-                        effect == "particlesdown"
-                        then
-                            if effect == "particlesup" then
-                                speed = -SCREEN_HEIGHT / effect_length
-                            else
-                                speed = SCREEN_HEIGHT / effect_length
-                            end
-
-                            self:x(random_pos.x)
-                            self:y(-(sprite_size.h / 2) + 
-                                (((beat * speed) + random_pos.y) % SCREEN_HEIGHT) * (1.25 * expand)
-                            )
-
-                        else
-                            if effect == "particlesleft" then
-                                speed = -SCREEN_HEIGHT / effect_length
-                            else
-                                speed = SCREEN_HEIGHT / effect_length
-                            end
-
-                            self:x(-(sprite_size.w / 2) + 
-                                (((beat * speed) + random_pos.x) % SCREEN_WIDTH) * (1.25 * expand)
-                            )
-                            self:y(random_pos.y)
-                        end
-                    end
-
-                    -- depth opacity
-                    if depth_opacity then
-                        local opacity_value
-                        if
-                        effect == "particlesin" or
-                        effect == "particlesbouncein" or
-                        effect == "particleslaserin" or
-                        effect == "particlesout" or
-                        effect == "particlesbounceout" or
-                        effect == "particleslaserout"
-                        then
-                            opacity_value = (1000 + self:GetZ()) / 1000
-                        else
-                            opacity_value = 0.25 + (i / num_sprites / 1.5)
-                        end
-
-                        self:diffuse(opacity_value, opacity_value, opacity_value, 1)
-                    end
-
-                    -- rotation
-                    if spin_length then
-                        if
-                        effect == "particlesin" or
-                        effect == "particlesdown" or
-                        effect == "particlesright"
-                        then
-                            if effect == "particlesdown" or effect == "particlesright" then
-                                self:rotationz((random_angle[i] - (beat * 360 / spin_length)) % 360)
-                            else
-                                self:rotationz(-((beat * (360 / spin_length)) % 360))
-                            end
-
-                        elseif
-                        effect == "particlesout" or
-                        effect == "particlesup" or
-                        effect == "particlesleft"
-                        then
-                            if effect == "particlesup" or effect == "particlesleft" then
-                                self:rotationz((random_angle[i] + (beat * 360 / spin_length)) % 360)
-                            else
-                                self:rotationz((beat * (360 / spin_length)) % 360)
-                            end
-                        end
-                    end
-
-                    if effect == "particleslaserin" or effect == "particleslaserout" then
-                        self:rotationx(-90)
-                    end
-
-                -- snail effect
-                elseif snail_effect then
-                    local function generate_snail_order(cols, rows)
-                        local snail_x = {}
-                        local snail_y = {}
-
-                        -- bordes del "rectángulo" actual
-                        local left   = 0
-                        local right  = cols - 1
-                        local top    = 0
-                        local bottom = rows - 1
-
-                        local index = 1
-
-                        while left <= right and top <= bottom do
-                            
-                            -- 1) mover derecha
-                            for x = left, right do
-                                snail_x[index] = x
-                                snail_y[index] = top
-                                index = index + 1
-                            end
-                            top = top + 1
-                            if top > bottom then break end
-
-                            -- 2) mover abajo
-                            for y = top, bottom do
-                                snail_x[index] = right
-                                snail_y[index] = y
-                                index = index + 1
-                            end
-                            right = right - 1
-                            if left > right then break end
-
-                            -- 3) mover izquierda
-                            for x = right, left, -1 do
-                                snail_x[index] = x
-                                snail_y[index] = bottom
-                                index = index + 1
-                            end
-                            bottom = bottom - 1
-                            if top > bottom then break end
-
-                            -- 4) mover arriba
-                            for y = bottom, top, -1 do
-                                snail_x[index] = left
-                                snail_y[index] = y
-                                index = index + 1
-                            end
-                            left = left + 1
-                        end
-
-                        return snail_x, snail_y
-                    end
-
-                    -- x and y position
-                    local snail_x_coord, snail_y_coord = generate_snail_order(mesh.cols, mesh.rows)
-
-                    if effect == "snailinreverse" or effect == "snailoutreverse" then
-                        self:x(adjust_tile + (snail_x_coord[#snail_x_coord - i] * sprite_size.w))
-                        self:y(snail_y_coord[#snail_y_coord - i] * sprite_size.h)
-                    else
-                        self:x(adjust_tile + (snail_x_coord[i + 1] * sprite_size.w))
-                        self:y(snail_y_coord[i + 1] * sprite_size.h)
-                    end
-
-                    -- diffuse alpha anim
-                    local alpha_anim
-
-                    if effect == "snailin" or effect == "snailinreverse" then
-                        alpha_anim = math.abs(
-                            math.floor((((beat + effect_offset) / effect_length) + (num_sprites - (i / num_sprites))) % 2) - 1
-                        )
-                    else
-                        alpha_anim = math.floor(
-                            (((beat + effect_offset) / effect_length) + (num_sprites - (i / num_sprites))) % 2
-                        )
-                    end
-
-                    self:diffusealpha(alpha_anim)
-
-                -- spiral effects
-                elseif spiral_effect then
-                    -- Z movement
-                    local separator = 1000 / num_sprites
-                    local speed = beat * 1000 / effect_length
-
-                    if effect == "spiral2in" or effect == "spiral2out" then
-                        speed = beat * 1000 / 6
-                    elseif effect == "vortexin" or effect == "vortexout" then
-                        speed = beat * 1000 / 5
-                    end
-
-                    local anim_z
-                    if effect == "spiral1in" or effect == "spiral2in" or effect == "vortexin" then
-                        anim_z = -1000 + ((i * separator) + speed) % 1000
-                    else
-                        anim_z = -1000 + ((i * separator) - speed) % 1000
-                    end
-
-                    self:z(anim_z)
-
-                    local function expand(start, increase)
-                        return start + ((1000 + self:GetZ()) / 1000) * increase
-                    end
-
-                    -- spiral 1
-                    if effect == "spiral1in" or effect == "spiral1out" then
-                        -- X and Y position
-                        self:x(SCREEN_CENTER_X + SCREEN_CENTER_X * expand(0.5, 0.75) * math.sin(math.rad(
-                            i * (360 / num_sprites)
-                        )))
-                        self:y(SCREEN_CENTER_Y + SCREEN_CENTER_X * expand(0.5, 0.75) * math.cos(math.rad(
-                            i * (360 / num_sprites)
-                        )))
-
-                        -- rotation
-                        local rotation
-                        if effect == "spiral1in" then
-                            rotation = -(beat * 360 / effect_length) % 360
-                        else
-                            rotation = (beat * 360 / effect_length) % 360
-                        end
-
-                        -- set parameters
-                        self:zoom(1.25)
-                        self:rotationz(rotation)
-
-                    -- spiral 2
-                    elseif effect == "spiral2in" or effect == "spiral2out" then
-                        local function set_coords_a_and_b(start, finish)
-                            local anim = (1000 + self:GetZ()) / 1000
-                            return start + anim * (finish - start)
-                        end
-
-                        self:x(
-                            set_coords_a_and_b(
-                                SCREEN_CENTER_X + SCREEN_CENTER_X * math.sin(math.rad(-i * 60)),
-                                SCREEN_CENTER_X + SCREEN_CENTER_X * math.sin(math.rad(-(i + 1) * 60))
-                            )
-                        )
-                        self:y(
-                            set_coords_a_and_b(
-                                SCREEN_CENTER_Y + SCREEN_CENTER_X * math.cos(math.rad(-i * 60)),
-                                SCREEN_CENTER_Y + SCREEN_CENTER_X * math.cos(math.rad(-(i + 1) * 60))
-                            )
-                        )
-
-                        self:rotationz(-60 * (i + 1) % 360)
-
-                    -- vortex
-                    else
-                        SCREENMAN:SystemMessage("Effect \""..effect.."\" under construction")
-                    end
-
-                -- explode effects
-                elseif explode_effect then
-                    -- beat config
-                    beat = (beat / effect_length) % 1
-                    beat = (beat + effect_offset) % 1
-
-                    if effect_half then
-                        beat = beat / 2
-                    end
-
-                    if effect == "explodeout" or effect == "explodeoutspin" then
-                        if effect_half then
-                            beat = 0.5 - beat
-                        else
-                            beat = 1 - beat
-                        end
-                    end
-
-                    if effect_pingpong then
-                        if effect == "explodein" or effect == "explodeinspin" then
-                            if effect_half then
-                                beat = 0.25 - math.abs(-0.25 + beat)
-                            else
-                                beat = 0.5 - math.abs(-0.5 + beat)
-                            end
-
-                        else
-                            if effect_half then
-                                beat = math.abs(-0.25 + beat)
-                            else
-                                beat = math.abs(-0.5 + beat)
-                            end
-                        end
-                    end
-
-                    -- movement calc
-                    local mov_x = beat * add_margin("x") * (SCREEN_WIDTH / sprite_size.w) * (2 - (2 / mesh.cols))
-                    local mov_y = beat * add_margin("y") * (SCREEN_HEIGHT / sprite_size.h) * (2 - (2 / mesh.rows))
-
-                    if mesh.cols % 2 == 1 then
-                        mov_x = beat * add_margin("x") * (SCREEN_WIDTH / sprite_size.w) * 2
-                    end
-
-                    if mesh.rows % 2 == 1 then
-                        mov_y = beat * add_margin("y") * (SCREEN_HEIGHT / sprite_size.h) * 2
-                    end
-
-                    -- rotation calc
-                    local rotation = 0
-                    if effect == "explodeinspin" or effect == "explodeoutspin" then
-                        rotation = (-i * (360 / 14)) - (beat * 360 * 4)
-                    end
-
-                    -- animations
-                    self:x(SCREEN_CENTER_X + mov_x * (mesh.cols * 2))
-                    self:y(SCREEN_CENTER_Y + mov_y * (mesh.rows * 2) * (mesh.cols / mesh.rows))
-                    self:rotationz(rotation)
-
-                -- misc effects
-                elseif misc_effect then
-                    -- DVD bounce effect
-                    if effect == "dvdbounce" then
-                        if effect_half then
-                            beat = beat + 4
-                        end
-
-                        local limit = {
-                            x = SCREEN_WIDTH - sprite_size.w,
-                            y = SCREEN_HEIGHT - sprite_size.h
-                        }
-
-                        local init_pos = {
-                            x = (
-                                (SCREEN_WIDTH - sprite_size.w * 1.5)
-                                - ((SCREEN_WIDTH - sprite_size.w * 1.5) - (SCREEN_WIDTH / ((num_sprites - 1) / 1.5)))
-                                / (num_sprites - 1) * 2 * ((i - 1) % ((num_sprites - 1) / 2))
-                            ) / 2,
-                            y = (
-                                ((SCREEN_HEIGHT / ((num_sprites - 1) / 2))
-                                + ((SCREEN_HEIGHT - (sprite_size.h * 1.25)) - (SCREEN_HEIGHT / ((num_sprites - 1) / 2)))
-                                / (num_sprites - 1) * i)
-                            ) / 3
-                        }
-
-                        local speed = {
-                            x = (beat / effect_length * 2.75) * (1 + (i / num_sprites) / 1.3),
-                            y = (beat / effect_length * 2.75) * (1.15 + (1 - (i / num_sprites)))
-                        }
-                        if sprite_size.w >= SCREEN_WIDTH / 2 then
-                            speed.y = speed.y * num_sprites / 2
-                        end
-
-                        local anim = {
-                            x = math.abs(-limit.x + (init_pos.x - speed.x * sprite_size.w) % limit.x * 2),
-                            y = math.abs(-limit.y + (init_pos.y - speed.y * sprite_size.h) % limit.y * 2)
-                        }
-                        if sprite_size.w >= SCREEN_WIDTH then anim.x = 0 end
-
-                        self:x(anim.x)
-                        self:y(anim.y)
-
-                    -- scroll X and Y effect
-                    elseif effect == "scrollxy" then
-                        local length = effect_length / 2
-
-                        beat = (-0.5 + length + ((beat + num_sprites) / ((i / num_sprites) + 1))) % length
-
-                        if i % 2 == 0 then
-                            self:x(-sprite_size.w / 2 + (sprite_size.w * i / 2))
-
-                            if math.floor(i / 2) % 2 == 0 then
-                                self:y(-sprite_size.h + (SCREEN_HEIGHT + sprite_size.h) * beat / length)
-                            else
-                                self:y(SCREEN_HEIGHT - (SCREEN_HEIGHT + sprite_size.h) * beat / length)
-                            end
-
-                        else
-                            self:y((-sprite_size.h / 1.5) + (sprite_size.h * i / 2.5))
-
-                            if math.floor(i / 2) % 2 == 0 then
-                                self:x(-sprite_size.w + (SCREEN_WIDTH + sprite_size.w) * beat / length)
-                            else
-                                self:x(SCREEN_WIDTH - (SCREEN_WIDTH + sprite_size.w) * beat / length)
-                            end
-                        end
-                    end
-
-                -- background door effects
-                elseif bgdoor_effect then
-                    beat = (beat / effect_length) % 1
-
-                    if effect == "bgdoorclose" then
-                        beat = 1 - beat
-                    end
-
-                    if i == 0 then
-                        self:x(-beat * SCREEN_WIDTH / 2)
-                        self:y(-beat * SCREEN_HEIGHT / 2)
-                    end
-
-                    if i == 1 then
-                        self:x(beat * SCREEN_WIDTH / 2)
-                        self:y(-beat * SCREEN_HEIGHT / 2)
-                    end
-
-                    if i == 2 then
-                        self:x(-beat * SCREEN_WIDTH / 2)
-                        self:y(beat * SCREEN_HEIGHT / 2)
-                    end
-
-                    if i == 3 then
-                        self:x(beat * SCREEN_WIDTH / 2)
-                        self:y(beat * SCREEN_HEIGHT / 2)
-                    end
-
-                elseif kaleidoscope2_effect then
-                    --SCREENMAN:SystemMessage("Effect \""..effect.."\" under construction")
-
-                else
-                    if effect ~= "" then
-                        if
-                        not bgmirror_effect and
-                        not tilespin_effect and
-                        not bgwarp_effect and
-                        not bgdistort_effect and
-                        not kaleidoscope2_effect
-                        then
-                            SCREENMAN:SystemMessage("Effect \""..effect.."\" doesn't exist")
-                        end
-                    end
-                end
-            end)
+            -- Vinculamos la función de actualización compartida
+            self.random_index = random_index
+            self.random_angle = random_angle
+            self.random_pos = random_pos
+            self.calc_margin = calc_margin
+            self.adj_x = adj_x
+            self:SetUpdateFunction(shared_sprite_update)
         end
     }
 end
