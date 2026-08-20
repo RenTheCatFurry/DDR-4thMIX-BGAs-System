@@ -1978,6 +1978,20 @@ if kaleidoscope2_effect then
                 update_vertices(tex:GetTextureWidth(), tex:GetTextureHeight(), 0)
                 self:SetVertices(vertices)
             end
+
+            -- Blend mode y colores
+            self:blend(blend_mode)
+            if first_texture.rgb then
+                local rgb = first_texture.rgb
+                self:diffuse(rgb[1], rgb[2], rgb[3], alpha)
+            else
+                self:diffuse(1,1,1,alpha)
+            end
+
+            if first_texture.glow then
+                local glow = first_texture.glow
+                self:glow(glow[1], glow[2], glow[3], glow[4])
+            end
         end,
 
         BeatMessageCommand = function(self, params)
