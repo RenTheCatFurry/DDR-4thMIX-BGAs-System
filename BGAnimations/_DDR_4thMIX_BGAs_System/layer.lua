@@ -346,9 +346,7 @@ local song_bg_aft
 local song_bg_path = GAMESTATE:GetCurrentSong():GetBackgroundPath()
 local song_has_bg = GAMESTATE:GetCurrentSong():HasBackground()
 
-if not song_has_bg then
-    song_bg_path = "ddr4m.png"
-end
+if not song_has_bg then song_bg_path = "ddr4m.png" end
 
 if load_song_bg then
     bg_mode = true
@@ -394,10 +392,11 @@ if load_song_bg then
             OnCommand = function(self)
                 if song_has_bg then
                     self:scale_or_crop_background()
-                    self:Center()
                 else
                     self:zoomto(SCREEN_WIDTH, SCREEN_HEIGHT)
                 end
+
+                self:Center()
             end
         },
 
