@@ -85,27 +85,31 @@ local layer6 = {
 }
 
 local function ShowOn(...)
-    local visible = {}
-
+    local mask = {}
     for _, v in ipairs({...}) do
-        visible[v] = true
+        mask[v] = true
     end
 
     return function(self, params)
-        self:visible(visible[params.beat] or false)
+        self:visible(mask[params.beat] or false)
     end
 end
+
+local show_1_2_3 = ShowOn(1,2,3)
+local show_0 = ShowOn(0)
+local show_1 = ShowOn(1)
+local show_2 = ShowOn(2)
+local show_3 = ShowOn(3)
 
 return Def.ActorFrame{
     OnCommand = function(self)
         local start_beat = GAMESTATE:GetSongPosition():GetSongBeat()
         local lastBeat = -1
-        local msg = {}
+        local msg = { beat = 0 }
 
         self:SetUpdateFunction(function(self)
-            local beat = math.floor(
-                (GAMESTATE:GetSongPosition():GetSongBeat() - start_beat)
-            ) % 4
+            local current_beat = GAMESTATE:GetSongPosition():GetSongBeat()
+            local beat = math.floor((current_beat - start_beat)) % 4
 
             if beat ~= lastBeat then
                 lastBeat = beat
@@ -119,26 +123,26 @@ return Def.ActorFrame{
 
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2),
-        KeyframeMessageCommand = ShowOn(1,2,3)
+        KeyframeMessageCommand = show_1_2_3
     },
 
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer3),
-        KeyframeMessageCommand = ShowOn(0)
+        KeyframeMessageCommand = show_0
     },
 
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer4),
-        KeyframeMessageCommand = ShowOn(1)
+        KeyframeMessageCommand = show_1
     },
 
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer5),
-        KeyframeMessageCommand = ShowOn(2)
+        KeyframeMessageCommand = show_2
     },
 
     Def.ActorFrame{
         LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer6),
-        KeyframeMessageCommand = ShowOn(3)
+        KeyframeMessageCommand = show_3
     }
 }
