@@ -207,6 +207,10 @@ effect == "snailoutreverse"
 then
     snail_effect = true
 
+    if effect_half then
+        num_sprites = (mesh.cols * mesh.rows) / 2
+    end
+
 elseif
 effect == "spiral1in" or
 effect == "spiral1out" or
@@ -2534,14 +2538,17 @@ local function shared_sprite_update(self)
 
         -- diffuse alpha anim
         local alpha_anim
+        local snail_length = beat
+
+        if effect_half then snail_length = beat % effect_length end
 
         if effect == "snailin" or effect == "snailinreverse" then
-            alpha_anim = math.abs(
-                math.floor((((beat + effect_offset) / effect_length) + (num_sprites - (i / num_sprites))) % 2) - 1
-            )
+            alpha_anim = math.abs(math.floor(
+                (((snail_length + effect_offset) / effect_length) + (num_sprites - (i / num_sprites))) % 2
+            ) - 1)
         else
             alpha_anim = math.floor(
-                (((beat + effect_offset) / effect_length) + (num_sprites - (i / num_sprites))) % 2
+                (((snail_length + effect_offset) / effect_length) + (num_sprites - (i / num_sprites))) % 2
             )
         end
 
