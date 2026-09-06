@@ -299,7 +299,11 @@ if particles_effect or spiral_effect then
     effect ~= "particlesup" or
     effect ~= "particlesdown"
     then
-        field_of_view = 166
+        if effect == "spiral2in" or effect == "spiral2out" then
+            field_of_view = 170
+        else
+            field_of_view = 166
+        end
     end
 end
 
