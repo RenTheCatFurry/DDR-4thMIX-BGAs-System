@@ -314,7 +314,7 @@ if p.scroll then
     local tex_has_2_frames = false
     local tex_frames_in_seq = has_property("framesseq", first_texture)
 
-    if scroll_dir == 2 or scroll_dir == 6 then add_rows = 1 end
+    if scroll_dir ~= 4 or scroll_dir ~= 8 then add_rows = 1 end
 
     if first_texture.frames then
         if #first_texture.frames == 2 and tex_frames_in_seq then
