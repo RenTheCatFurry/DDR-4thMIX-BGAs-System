@@ -1,0 +1,25 @@
+local layer1 = {
+    textures = {{}},
+    effect = "tilespin",
+    effectlength = 4,
+    coloranim = 1
+}
+
+local blackbg = {
+    textures = {{}},
+    fadelength = 2,
+    properties = {"blackbg"}
+}
+
+local layer2 = {
+    textures = {{}},
+    effect = "bgmirror1",
+    fadelength = 2,
+    blendmode = "Add"
+}
+
+return Def.ActorFrame{
+    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer1),
+    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", blackbg),
+    LoadActor("../_DDR_4thMIX_BGAs_System/layer.lua", layer2)
+}
