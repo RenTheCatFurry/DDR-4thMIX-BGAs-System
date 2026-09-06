@@ -305,13 +305,16 @@ end
 
 -- activate scroll
 local add_more_cols = false
+
 if p.scroll then
     scroll_active = true
 
     local add_cols = 1
-    local add_rows = 1
+    local add_rows = 0
     local tex_has_2_frames = false
     local tex_frames_in_seq = has_property("framesseq", first_texture)
+
+    if scroll_dir == 2 or scroll_dir == 6 then add_rows = 1 end
 
     if first_texture.frames then
         if #first_texture.frames == 2 and tex_frames_in_seq then
@@ -326,7 +329,7 @@ if p.scroll then
         end
 
         if mesh.rows % 2 == 0 then
-            add_rows = 2
+            if scroll_dir == 2 or scroll_dir == 6 then add_rows = 2 end
         end
     end
 
@@ -361,7 +364,6 @@ if load_song_bg then
 
             self:SetWidth(SCREEN_WIDTH)
             self:SetHeight(SCREEN_HEIGHT)
-            self:EnableAlphaBuffer(true)
             self:Create()
         end,
         
