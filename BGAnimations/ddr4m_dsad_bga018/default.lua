@@ -23,7 +23,7 @@ local layer2 = {
     effectlength = 1,
     effectoffset = 0.5,
     effectstep = 0.5,
-    blinkalpha = 0.9,
+    blinkalpha = 0.95,
     blendmode = "Add"
 }
 
