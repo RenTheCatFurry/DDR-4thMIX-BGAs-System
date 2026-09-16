@@ -715,7 +715,17 @@ local function load_sprite(i, tex)
 
             if tilespin_effect and bg_mode then
                 if not tex.size then
-                    self:halign(1/8):valign(1/6)
+                    self:halign(1/8)
+                    self:valign(1/6)
+                end
+
+            elseif tilespin_effect and not bg_mode then
+                local sprite_ratio = size_per_sprite.w / size_per_sprite.h
+
+                if sprite_ratio <= 1 then
+                    self:valign(0.5 * sprite_ratio)
+                else
+                    self:halign(0.5 / sprite_ratio)
                 end
             end
 
@@ -1928,14 +1938,24 @@ if kaleidoscope2_effect then
         local adjust_u = (load_song_bg or colorama_fix) and (SCREEN_WIDTH / tex_width) or 1
         local adjust_v = (load_song_bg or colorama_fix) and (SCREEN_HEIGHT / tex_height) or 1
 
+        -- kaleidoscope parameters
+        --[[
         local scale_x = 0.5 / SCREEN_RATIO
         local scale_y = 1
         local offset_x = -0.1
         local offset_y = -0.025
         local skew_x = 0.5
         local skew_y = -0.25
+        ]]
 
-        local effect_len = -effect_length * 16
+        local scale_x = 0.5 / SCREEN_RATIO
+        local scale_y = 1
+        local offset_x = -0.1
+        local offset_y = -0.025
+        local skew_x = -1/3
+        local skew_y = -1
+
+        local effect_len = effect_length * 16
         local base_rotation = math.pi / 2
         local angle = base_rotation - ((beat or 0) / effect_len) * (math.pi * 2)
 
