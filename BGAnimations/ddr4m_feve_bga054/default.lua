@@ -6,10 +6,10 @@ local layer1 = {
 
 local layer2 = {
     textures = {
-        {img = "feve/aba_feve f00 c06 8x16"},
-        {img = "feve/aba_feve f01 c06 8x16"},
-        {img = "feve/aba_feve f02 c06 8x16"},
-        {img = "feve/aba_feve f03 c06 8x16"}
+        {img = "feve/aba_feve f00 c06 8x16.png"},
+        {img = "feve/aba_feve f01 c06 8x16.png"},
+        {img = "feve/aba_feve f02 c06 8x16.png"},
+        {img = "feve/aba_feve f03 c06 8x16.png"}
     },
     effect = "bgmirror2",
     blendmode = "Add",
