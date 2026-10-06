@@ -1,7 +1,7 @@
 local layer1 = {
     textures = {
         {
-            img = "rapp/eba_rapp f00 c02 8x10",
+            img = "rapp/eba_rapp f00 c02 8x10.png",
             properties = {"colorama"}
         }
     },
